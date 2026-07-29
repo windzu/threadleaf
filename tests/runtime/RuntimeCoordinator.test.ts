@@ -130,10 +130,18 @@ describe('RuntimeCoordinator', () => {
     const taskA = coordinator.send('a', 'first', 'A.md');
     await new Promise(resolve => setImmediate(resolve));
     assert.equal((await coordinator.getSnapshot('a')).status, 'running');
+    assert.deepEqual(coordinator.getActivitySummary('a'), {
+      status: 'running',
+      badgeCount: 1,
+      runningCount: 1,
+      waitingApprovalCount: 0,
+      failedCount: 0,
+    });
 
     await coordinator.send('b', 'second', 'B.md');
     assert.equal((await coordinator.getSnapshot('b')).status, 'completed');
     assert.equal((await coordinator.getSnapshot('a')).status, 'running');
+    assert.equal(coordinator.getActivitySummary('b').status, 'running');
 
     gate.resolve();
     await taskA;
@@ -142,6 +150,13 @@ describe('RuntimeCoordinator', () => {
       (await coordinator.getSnapshot('a')).conversation?.messages.at(-1)?.content,
       'response:a',
     );
+    assert.deepEqual(coordinator.getActivitySummary('b'), {
+      status: 'completed',
+      badgeCount: 0,
+      runningCount: 0,
+      waitingApprovalCount: 0,
+      failedCount: 0,
+    });
   });
 
   it('pauses a task for approval and resumes after the decision', async () => {
@@ -157,6 +172,13 @@ describe('RuntimeCoordinator', () => {
     const waiting = await coordinator.getSnapshot('a');
     assert.equal(waiting.status, 'waiting-approval');
     assert.equal(waiting.pendingApproval?.toolName, 'command_execution');
+    assert.deepEqual(coordinator.getActivitySummary('a'), {
+      status: 'waiting-approval',
+      badgeCount: 1,
+      runningCount: 1,
+      waitingApprovalCount: 1,
+      failedCount: 0,
+    });
 
     coordinator.respondToApproval('a', 'allow' satisfies ApprovalDecision);
     await task;
