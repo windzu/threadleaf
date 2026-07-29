@@ -111,3 +111,9 @@ Chinese name: **页脉**.
 Threadleaf is licensed under the MIT License. Selected code derived from
 Claudian retains its required MIT notice in
 [Third-party notices](THIRD_PARTY_NOTICES.md).
+
+## Contributing
+
+All changes, including features and bug fixes, must be developed on a branch
+and merged through a pull request. See [Contributing](CONTRIBUTING.md) for the
+required workflow and validation rules.
