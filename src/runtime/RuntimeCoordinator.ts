@@ -17,7 +17,8 @@ export type ConversationTaskStatus =
   | 'waiting-approval'
   | 'completed'
   | 'failed'
-  | 'cancelled';
+  | 'cancelled'
+  | 'interrupted';
 
 export interface PendingApproval {
   toolName: string;
@@ -38,7 +39,8 @@ export type RuntimeActivityStatus =
   | 'running'
   | 'waiting-approval'
   | 'completed'
-  | 'failed';
+  | 'failed'
+  | 'interrupted';
 
 export interface RuntimeActivitySummary {
   status: RuntimeActivityStatus;
@@ -46,6 +48,7 @@ export interface RuntimeActivitySummary {
   runningCount: number;
   waitingApprovalCount: number;
   failedCount: number;
+  interruptedCount: number;
 }
 
 interface RuntimeEntry {
@@ -55,6 +58,7 @@ interface RuntimeEntry {
   error: string | null;
   pendingApproval: PendingApproval | null;
   resolveApproval: ((decision: ApprovalDecision) => void) | null;
+  lastProgressPersistedAt: number;
 }
 
 type RuntimeListener = (
@@ -65,11 +69,14 @@ type RuntimeListener = (
 export class RuntimeCoordinator {
   private entries = new Map<string, RuntimeEntry>();
   private listeners = new Set<RuntimeListener>();
+  private shuttingDown = false;
 
   constructor(
     private readonly host: ProviderHost,
     private readonly conversations: ConversationStore,
     private readonly createRuntime: (host: ProviderHost) => ChatRuntime,
+    private readonly now: () => number = Date.now,
+    private readonly progressPersistIntervalMs = 250,
   ) {}
 
   onChange(listener: RuntimeListener): () => void {
@@ -93,6 +100,9 @@ export class RuntimeCoordinator {
       status => status === 'waiting-approval',
     ).length;
     const failedCount = statuses.filter(status => status === 'failed').length;
+    const interruptedCount = statuses.filter(
+      status => status === 'interrupted',
+    ).length;
     const activeStatus = activeConversationId
       ? this.entries.get(activeConversationId)?.status
       : undefined;
@@ -104,6 +114,7 @@ export class RuntimeCoordinator {
         runningCount,
         waitingApprovalCount,
         failedCount,
+        interruptedCount,
       };
     }
     if (runningCount > 0) {
@@ -113,6 +124,7 @@ export class RuntimeCoordinator {
         runningCount,
         waitingApprovalCount,
         failedCount,
+        interruptedCount,
       };
     }
     if (activeStatus === 'failed' || failedCount > 0) {
@@ -122,6 +134,17 @@ export class RuntimeCoordinator {
         runningCount,
         waitingApprovalCount,
         failedCount,
+        interruptedCount,
+      };
+    }
+    if (activeStatus === 'interrupted' || interruptedCount > 0) {
+      return {
+        status: 'interrupted',
+        badgeCount: interruptedCount,
+        runningCount,
+        waitingApprovalCount,
+        failedCount,
+        interruptedCount,
       };
     }
     if (activeStatus === 'completed') {
@@ -131,6 +154,7 @@ export class RuntimeCoordinator {
         runningCount,
         waitingApprovalCount,
         failedCount,
+        interruptedCount,
       };
     }
     return {
@@ -139,6 +163,7 @@ export class RuntimeCoordinator {
       runningCount,
       waitingApprovalCount,
       failedCount,
+      interruptedCount,
     };
   }
 
@@ -146,6 +171,46 @@ export class RuntimeCoordinator {
     conversationId: string,
     text: string,
     primaryPagePath: string,
+  ): Promise<void> {
+    await this.sendTurn(conversationId, text, primaryPagePath);
+  }
+
+  async retryInterrupted(conversationId: string): Promise<void> {
+    const entry = await this.requireInterruptedEntry(conversationId);
+    const state = entry.conversation!.activeTurn!;
+    const userMessage = entry.conversation!.messages.find(
+      message => message.id === state.userMessageId && message.role === 'user',
+    );
+    if (!userMessage) {
+      throw new Error('The interrupted request is no longer available.');
+    }
+    await this.sendTurn(
+      conversationId,
+      userMessage.content,
+      userMessage.primaryPagePath ?? state.primaryPagePath,
+      userMessage.displayContent,
+    );
+  }
+
+  async continueInterrupted(
+    conversationId: string,
+    primaryPagePath: string,
+  ): Promise<void> {
+    await this.requireInterruptedEntry(conversationId);
+    await this.sendTurn(
+      conversationId,
+      'Continue from where the previous response was interrupted. '
+        + 'Do not repeat work that is already complete.',
+      primaryPagePath,
+      'Continue',
+    );
+  }
+
+  private async sendTurn(
+    conversationId: string,
+    text: string,
+    primaryPagePath: string,
+    displayContent?: string,
   ): Promise<void> {
     const entry = await this.ensureEntry(conversationId);
     if (entry.status === 'running' || entry.status === 'waiting-approval') {
@@ -156,27 +221,37 @@ export class RuntimeCoordinator {
     }
 
     const conversation = entry.conversation;
+    const startedAt = this.now();
     const userMessage: ChatMessage = {
       id: randomUUID(),
       role: 'user',
       content: text,
-      timestamp: Date.now(),
+      ...(displayContent ? { displayContent } : {}),
+      timestamp: startedAt,
       primaryPagePath,
     };
     const assistantMessage: ChatMessage = {
       id: randomUUID(),
       role: 'assistant',
       content: '',
-      timestamp: Date.now(),
+      timestamp: startedAt,
       contentBlocks: [],
       toolCalls: [],
     };
     conversation.messages.push(userMessage, assistantMessage);
-    await this.conversations.save(conversation);
-
+    conversation.activeTurn = {
+      status: 'running',
+      userMessageId: userMessage.id,
+      assistantMessageId: assistantMessage.id,
+      primaryPagePath,
+      startedAt,
+      updatedAt: startedAt,
+    };
     entry.status = 'running';
     entry.error = null;
     entry.pendingApproval = null;
+    entry.lastProgressPersistedAt = Number.NEGATIVE_INFINITY;
+    await this.conversations.save(conversation);
     this.configureRuntimeCallbacks(conversationId, entry);
     entry.runtime.syncConversationState(conversation);
     this.emit(conversationId, entry);
@@ -192,31 +267,44 @@ export class RuntimeCoordinator {
         conversation.messages.slice(0, -2),
         { model: conversation.selectedModel },
       )) {
+        if (this.shuttingDown) {
+          break;
+        }
         this.applyChunk(assistantMessage, conversation, chunk);
         if (chunk.type === 'error') {
           entry.status = 'failed';
           entry.error = chunk.content;
         }
+        await this.persistProgressIfDue(entry);
         this.emit(conversationId, entry);
       }
 
+      if (this.shuttingDown) {
+        return;
+      }
       const sessionUpdates = entry.runtime.buildSessionUpdates({
         conversation,
         sessionInvalidated: entry.runtime.consumeSessionInvalidation(),
       });
       Object.assign(conversation, sessionUpdates.updates);
-      conversation.lastResponseAt = Date.now();
+      conversation.lastResponseAt = this.now();
+      delete conversation.activeTurn;
       await this.conversations.save(conversation);
 
       if (!(['failed', 'cancelled'] as ConversationTaskStatus[]).includes(entry.status)) {
         entry.status = 'completed';
       }
     } catch (error) {
+      if (this.shuttingDown) {
+        return;
+      }
       entry.status = 'failed';
       entry.error = error instanceof Error ? error.message : String(error);
       if (!assistantMessage.content) {
         assistantMessage.content = entry.error;
       }
+      this.captureSessionState(entry);
+      delete conversation.activeTurn;
       await this.conversations.save(conversation);
     } finally {
       entry.pendingApproval = null;
@@ -237,6 +325,11 @@ export class RuntimeCoordinator {
     entry.resolveApproval = null;
     entry.pendingApproval = null;
     entry.status = 'running';
+    if (entry.conversation?.activeTurn) {
+      entry.conversation.activeTurn.status = 'running';
+      entry.conversation.activeTurn.updatedAt = this.now();
+      this.persistWithoutBlocking(entry.conversation);
+    }
     this.emit(conversationId, entry);
     resolve(decision);
   }
@@ -251,12 +344,22 @@ export class RuntimeCoordinator {
     entry.pendingApproval = null;
     entry.runtime.cancel();
     entry.status = 'cancelled';
+    if (entry.conversation) {
+      this.captureSessionState(entry);
+      delete entry.conversation.activeTurn;
+      this.persistWithoutBlocking(entry.conversation);
+    }
     this.emit(conversationId, entry);
   }
 
   cleanup(): void {
+    this.shuttingDown = true;
     for (const entry of this.entries.values()) {
       entry.resolveApproval?.('cancel');
+      if (entry.conversation && this.markInterrupted(entry.conversation)) {
+        this.captureSessionState(entry);
+        this.persistWithoutBlocking(entry.conversation);
+      }
       entry.runtime.cleanup();
     }
     this.entries.clear();
@@ -269,13 +372,24 @@ export class RuntimeCoordinator {
       return entry;
     }
 
+    const conversation = await this.conversations.load(conversationId);
+    let status: ConversationTaskStatus = 'idle';
+    if (conversation?.activeTurn) {
+      if (conversation.activeTurn.status !== 'interrupted') {
+        this.markInterrupted(conversation);
+        await this.conversations.save(conversation);
+      }
+      status = 'interrupted';
+    }
+
     entry = {
       runtime: this.createRuntime(this.host),
-      conversation: await this.conversations.load(conversationId),
-      status: 'idle',
+      conversation,
+      status,
       error: null,
       pendingApproval: null,
       resolveApproval: null,
+      lastProgressPersistedAt: Number.NEGATIVE_INFINITY,
     };
     this.entries.set(conversationId, entry);
     return entry;
@@ -295,6 +409,11 @@ export class RuntimeCoordinator {
         };
         entry.resolveApproval = resolve;
         entry.status = 'waiting-approval';
+        if (entry.conversation?.activeTurn) {
+          entry.conversation.activeTurn.status = 'waiting-approval';
+          entry.conversation.activeTurn.updatedAt = this.now();
+          this.persistWithoutBlocking(entry.conversation);
+        }
         this.emit(conversationId, entry);
       });
     });
@@ -367,6 +486,75 @@ export class RuntimeCoordinator {
         ? `\n\n${chunk.content}`
         : chunk.content;
     }
+  }
+
+  private async requireInterruptedEntry(
+    conversationId: string,
+  ): Promise<RuntimeEntry> {
+    const entry = await this.ensureEntry(conversationId);
+    if (
+      entry.status !== 'interrupted'
+      || !entry.conversation?.activeTurn
+      || entry.conversation.activeTurn.status !== 'interrupted'
+    ) {
+      throw new Error('This conversation does not have an interrupted turn.');
+    }
+    return entry;
+  }
+
+  private async persistProgressIfDue(entry: RuntimeEntry): Promise<void> {
+    const conversation = entry.conversation;
+    const activeTurn = conversation?.activeTurn;
+    if (!conversation || !activeTurn) {
+      return;
+    }
+    const now = this.now();
+    activeTurn.updatedAt = now;
+    if (now - entry.lastProgressPersistedAt < this.progressPersistIntervalMs) {
+      return;
+    }
+    entry.lastProgressPersistedAt = now;
+    this.captureSessionState(entry);
+    await this.conversations.save(conversation);
+  }
+
+  private markInterrupted(conversation: Conversation): boolean {
+    const activeTurn = conversation.activeTurn;
+    if (!activeTurn) {
+      return false;
+    }
+    const interruptedAt = activeTurn.interruptedAt ?? this.now();
+    activeTurn.status = 'interrupted';
+    activeTurn.interruptedAt = interruptedAt;
+    activeTurn.updatedAt = interruptedAt;
+    const assistantMessage = conversation.messages.find(
+      message => message.id === activeTurn.assistantMessageId
+        && message.role === 'assistant',
+    );
+    if (assistantMessage) {
+      assistantMessage.interruptedAt = interruptedAt;
+      for (const toolCall of assistantMessage.toolCalls ?? []) {
+        if (toolCall.status === 'running') {
+          toolCall.status = 'blocked';
+        }
+      }
+    }
+    return true;
+  }
+
+  private persistWithoutBlocking(conversation: Conversation): void {
+    void this.conversations.save(conversation).catch(() => undefined);
+  }
+
+  private captureSessionState(entry: RuntimeEntry): void {
+    if (!entry.conversation) {
+      return;
+    }
+    const sessionUpdates = entry.runtime.buildSessionUpdates({
+      conversation: entry.conversation,
+      sessionInvalidated: false,
+    });
+    Object.assign(entry.conversation, sessionUpdates.updates);
   }
 
   private snapshot(entry: RuntimeEntry): ConversationRuntimeSnapshot {

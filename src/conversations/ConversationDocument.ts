@@ -1,8 +1,8 @@
 import type { Conversation } from '../core/types';
 
-export const CONVERSATION_DOCUMENT_VERSION = 1;
+export const CONVERSATION_DOCUMENT_VERSION = 2;
 
-export interface ConversationDocumentV1 {
+export interface ConversationDocumentV2 {
   version: typeof CONVERSATION_DOCUMENT_VERSION;
   conversation: Conversation;
 }
@@ -16,6 +16,32 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isValidActiveTurn(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return (
+    (
+      value.status === 'running'
+      || value.status === 'waiting-approval'
+      || value.status === 'interrupted'
+    )
+    && typeof value.userMessageId === 'string'
+    && typeof value.assistantMessageId === 'string'
+    && typeof value.primaryPagePath === 'string'
+    && isFiniteNumber(value.startedAt)
+    && isFiniteNumber(value.updatedAt)
+    && (
+      value.interruptedAt === undefined
+      || isFiniteNumber(value.interruptedAt)
+    )
+  );
+}
+
 function decodeConversation(value: unknown, expectedId: string): Conversation {
   if (!isRecord(value)) {
     throw new Error(`Conversation "${expectedId}" is not a JSON object.`);
@@ -26,11 +52,13 @@ function decodeConversation(value: unknown, expectedId: string): Conversation {
   if (
     typeof value.providerId !== 'string'
     || typeof value.title !== 'string'
-    || typeof value.createdAt !== 'number'
-    || !Number.isFinite(value.createdAt)
-    || typeof value.updatedAt !== 'number'
-    || !Number.isFinite(value.updatedAt)
+    || !isFiniteNumber(value.createdAt)
+    || !isFiniteNumber(value.updatedAt)
     || !Array.isArray(value.messages)
+    || (
+      value.activeTurn !== undefined
+      && !isValidActiveTurn(value.activeTurn)
+    )
   ) {
     throw new Error(`Conversation "${expectedId}" has an invalid schema.`);
   }
@@ -49,14 +77,14 @@ export function decodeConversationDocument(
   }
 
   if ('version' in value) {
-    if (value.version !== CONVERSATION_DOCUMENT_VERSION) {
+    if (value.version !== 1 && value.version !== CONVERSATION_DOCUMENT_VERSION) {
       throw new Error(
         `Conversation "${expectedId}" uses unsupported schema version "${String(value.version)}".`,
       );
     }
     return {
       conversation: decodeConversation(value.conversation, expectedId),
-      migratedFromLegacy: false,
+      migratedFromLegacy: value.version !== CONVERSATION_DOCUMENT_VERSION,
     };
   }
 
@@ -68,7 +96,7 @@ export function decodeConversationDocument(
 
 export function encodeConversationDocument(
   conversation: Conversation,
-): ConversationDocumentV1 {
+): ConversationDocumentV2 {
   return {
     version: CONVERSATION_DOCUMENT_VERSION,
     conversation: structuredClone(conversation),
