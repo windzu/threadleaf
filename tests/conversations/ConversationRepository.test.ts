@@ -43,6 +43,26 @@ describe('ConversationRepository', () => {
     assert.equal(stored.conversation.sessionId, 'thread-1');
   });
 
+  it('reads version 1 envelopes and upgrades them to the current version', async () => {
+    const path = '.threadleaf/conversations/v1.json';
+    const adapter = new MemoryJsonFileAdapter({
+      [path]: JSON.stringify({
+        version: 1,
+        conversation: conversation('v1'),
+      }),
+    });
+    const repository = new ConversationRepository(adapter);
+
+    const loaded = await repository.load('v1');
+    assert.equal(loaded?.id, 'v1');
+    await repository.save(loaded!);
+
+    assert.equal(
+      (adapter.readJson(path) as { version: number }).version,
+      CONVERSATION_DOCUMENT_VERSION,
+    );
+  });
+
   it('rejects unsupported versions and mismatched ids without modifying data', async () => {
     const versionedPath = '.threadleaf/conversations/future.json';
     const mismatchedPath = '.threadleaf/conversations/expected.json';
@@ -66,6 +86,31 @@ describe('ConversationRepository', () => {
     assert.equal(
       (adapter.readJson(versionedPath) as { version: number }).version,
       99,
+    );
+  });
+
+  it('rejects malformed persisted turn state', async () => {
+    const path = '.threadleaf/conversations/malformed.json';
+    const malformed = conversation('malformed');
+    malformed.activeTurn = {
+      status: 'running',
+      userMessageId: 'user-1',
+      assistantMessageId: 'assistant-1',
+      primaryPagePath: 'A.md',
+      startedAt: Number.NaN,
+      updatedAt: 2,
+    };
+    const adapter = new MemoryJsonFileAdapter({
+      [path]: JSON.stringify({
+        version: CONVERSATION_DOCUMENT_VERSION,
+        conversation: malformed,
+      }),
+    });
+    const repository = new ConversationRepository(adapter);
+
+    await assert.rejects(
+      repository.load('malformed'),
+      /invalid schema/,
     );
   });
 

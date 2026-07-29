@@ -166,7 +166,8 @@ export class ThreadleafView extends ItemView {
       });
       messageElement.createDiv({
         cls: 'threadleaf-message__content',
-        text: message.content || (message.role === 'assistant' ? '…' : ''),
+        text: message.displayContent
+          ?? (message.content || (message.role === 'assistant' ? '…' : '')),
       });
       if (message.toolCalls?.length) {
         const tools = messageElement.createDiv('threadleaf-message__tools');
@@ -188,6 +189,10 @@ export class ThreadleafView extends ItemView {
         cls: 'threadleaf-view__error',
         text: snapshot.error,
       });
+    }
+
+    if (snapshot?.status === 'interrupted') {
+      this.renderInterruptedRecovery(snapshot, page.path);
     }
 
     const composer = this.contentEl.createDiv('threadleaf-view__composer');
@@ -248,6 +253,46 @@ export class ThreadleafView extends ItemView {
     const deny = actions.createEl('button', { text: 'Deny' });
     deny.addEventListener('click', () => {
       this.runtimeCoordinator.respondToApproval(conversationId, 'deny');
+    });
+  }
+
+  private renderInterruptedRecovery(
+    snapshot: ConversationRuntimeSnapshot,
+    pagePath: string,
+  ): void {
+    const conversationId = snapshot.conversation?.id;
+    if (!conversationId) {
+      return;
+    }
+    const container = this.contentEl.createDiv('threadleaf-view__interrupted');
+    container.createEl('strong', { text: 'Response interrupted' });
+    container.createEl('p', {
+      text: 'Partial output was preserved. Retry the original request or continue from here.',
+    });
+    const actions = container.createDiv('threadleaf-view__interrupted-actions');
+    const retry = actions.createEl('button', { text: 'Retry' });
+    retry.addEventListener('click', () => {
+      this.runRecoveryAction(
+        () => this.runtimeCoordinator.retryInterrupted(conversationId),
+      );
+    });
+    const continueButton = actions.createEl('button', {
+      cls: 'mod-cta',
+      text: 'Continue',
+    });
+    continueButton.addEventListener('click', () => {
+      this.runRecoveryAction(
+        () => this.runtimeCoordinator.continueInterrupted(
+          conversationId,
+          pagePath,
+        ),
+      );
+    });
+  }
+
+  private runRecoveryAction(action: () => Promise<void>): void {
+    void action().catch(error => {
+      new Notice(error instanceof Error ? error.message : String(error));
     });
   }
 
@@ -321,6 +366,8 @@ export class ThreadleafView extends ItemView {
         return 'Failed';
       case 'cancelled':
         return 'Cancelled';
+      case 'interrupted':
+        return 'Interrupted';
       default:
         return 'Ready';
     }

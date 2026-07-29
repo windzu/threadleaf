@@ -59,6 +59,23 @@ export interface ChatMessage {
   userMessageId?: string;
   /** Provider-native assistant message identifier used for rewind/fork checkpoints. */
   assistantMessageId?: string;
+  /** Marks a partial assistant response whose live turn could not be resumed. */
+  interruptedAt?: number;
+}
+
+export type PersistedTurnStatus =
+  | 'running'
+  | 'waiting-approval'
+  | 'interrupted';
+
+export interface PersistedTurnState {
+  status: PersistedTurnStatus;
+  userMessageId: string;
+  assistantMessageId: string;
+  primaryPagePath: string;
+  startedAt: number;
+  updatedAt: number;
+  interruptedAt?: number;
 }
 
 /** Persisted conversation with messages and session state. */
@@ -86,6 +103,8 @@ export interface Conversation {
   enabledMcpServers?: string[];
   /** Assistant checkpoint identifier for resumeAtMessageId after rewind. */
   resumeAtMessageId?: string;
+  /** Non-terminal turn state used to recover interrupted plugin sessions. */
+  activeTurn?: PersistedTurnState;
 }
 
 /** Lightweight conversation metadata for the history dropdown. */

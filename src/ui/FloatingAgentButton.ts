@@ -8,6 +8,7 @@ const IDLE_ACTIVITY: RuntimeActivitySummary = {
   runningCount: 0,
   waitingApprovalCount: 0,
   failedCount: 0,
+  interruptedCount: 0,
 };
 
 export class FloatingAgentButton {
@@ -82,6 +83,7 @@ export class FloatingAgentButton {
       'waiting-approval',
       'completed',
       'failed',
+      'interrupted',
     ]) {
       button.removeClass(`threadleaf-floating-button--${status}`);
     }
@@ -121,6 +123,10 @@ export class FloatingAgentButton {
         return `${this.activity.failedCount} Threadleaf task${
           this.activity.failedCount === 1 ? '' : 's'
         } failed`;
+      case 'interrupted':
+        return `${this.activity.interruptedCount} Threadleaf task${
+          this.activity.interruptedCount === 1 ? '' : 's'
+        } interrupted`;
       case 'completed':
         return 'Threadleaf task completed';
       default:

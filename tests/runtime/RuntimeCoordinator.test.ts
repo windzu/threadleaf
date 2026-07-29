@@ -56,6 +56,7 @@ function deferred(): {
 function createFakeRuntime(options: {
   gateByConversation?: Map<string, Promise<void>>;
   approval?: boolean;
+  partialBeforeGate?: string;
 }): ChatRuntime {
   let conversationId = '';
   let approvalCallback: ApprovalCallback | null = null;
@@ -75,6 +76,9 @@ function createFakeRuntime(options: {
       };
     },
     async *query(): AsyncGenerator<StreamChunk> {
+      if (options.partialBeforeGate) {
+        yield { type: 'text', content: options.partialBeforeGate };
+      }
       await options.gateByConversation?.get(conversationId);
       if (options.approval && approvalCallback) {
         const decision = await approvalCallback(
@@ -136,6 +140,7 @@ describe('RuntimeCoordinator', () => {
       runningCount: 1,
       waitingApprovalCount: 0,
       failedCount: 0,
+      interruptedCount: 0,
     });
 
     await coordinator.send('b', 'second', 'B.md');
@@ -156,6 +161,7 @@ describe('RuntimeCoordinator', () => {
       runningCount: 0,
       waitingApprovalCount: 0,
       failedCount: 0,
+      interruptedCount: 0,
     });
   });
 
@@ -178,6 +184,7 @@ describe('RuntimeCoordinator', () => {
       runningCount: 1,
       waitingApprovalCount: 1,
       failedCount: 0,
+      interruptedCount: 0,
     });
 
     coordinator.respondToApproval('a', 'allow' satisfies ApprovalDecision);
@@ -185,5 +192,137 @@ describe('RuntimeCoordinator', () => {
     const completed = await coordinator.getSnapshot('a');
     assert.equal(completed.status, 'completed');
     assert.equal(completed.conversation?.messages.at(-1)?.content, 'approved');
+  });
+
+  it('recovers persisted running output as interrupted and retries non-destructively', async () => {
+    const gate = deferred();
+    const sourceConversations = new Map([['a', conversation('a')]]);
+    const sourceCoordinator = new RuntimeCoordinator(
+      host,
+      new MemoryConversationStore(sourceConversations),
+      () => createFakeRuntime({
+        gateByConversation: new Map([['a', gate.promise]]),
+        partialBeforeGate: 'partial response',
+      }),
+    );
+
+    const sourceTask = sourceCoordinator.send('a', 'original request', 'A.md');
+    await new Promise(resolve => setImmediate(resolve));
+    const persisted = structuredClone(sourceConversations.get('a')!);
+    assert.equal(persisted.activeTurn?.status, 'running');
+    assert.equal(persisted.messages.at(-1)?.content, 'partial response');
+    assert.equal(persisted.sessionId, 'session:a');
+    persisted.messages.at(-1)!.toolCalls = [{
+      id: 'tool-1',
+      name: 'command_execution',
+      input: {},
+      status: 'running',
+    }];
+
+    const recoveredConversations = new Map([['a', persisted]]);
+    const recoveredCoordinator = new RuntimeCoordinator(
+      host,
+      new MemoryConversationStore(recoveredConversations),
+      () => createFakeRuntime({}),
+      () => 500,
+    );
+    const interrupted = await recoveredCoordinator.getSnapshot('a');
+    assert.equal(interrupted.status, 'interrupted');
+    assert.equal(interrupted.conversation?.activeTurn?.status, 'interrupted');
+    assert.equal(interrupted.conversation?.messages.at(-1)?.content, 'partial response');
+    assert.equal(interrupted.conversation?.messages.at(-1)?.interruptedAt, 500);
+    assert.equal(
+      interrupted.conversation?.messages.at(-1)?.toolCalls?.[0]?.status,
+      'blocked',
+    );
+    assert.deepEqual(recoveredCoordinator.getActivitySummary('a'), {
+      status: 'interrupted',
+      badgeCount: 1,
+      runningCount: 0,
+      waitingApprovalCount: 0,
+      failedCount: 0,
+      interruptedCount: 1,
+    });
+
+    await recoveredCoordinator.retryInterrupted('a');
+    const retried = await recoveredCoordinator.getSnapshot('a');
+    assert.equal(retried.status, 'completed');
+    assert.equal(retried.conversation?.messages.length, 4);
+    assert.equal(retried.conversation?.messages.at(-2)?.content, 'original request');
+    assert.equal(retried.conversation?.messages.at(-1)?.content, 'response:a');
+    assert.equal(retried.conversation?.activeTurn, undefined);
+
+    gate.resolve();
+    await sourceTask;
+  });
+
+  it('continues an interrupted turn on the same conversation with explicit display text', async () => {
+    const interrupted = conversation('a');
+    interrupted.messages = [
+      {
+        id: 'user-1',
+        role: 'user',
+        content: 'long task',
+        timestamp: 10,
+        primaryPagePath: 'A.md',
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        content: 'partial',
+        timestamp: 10,
+      },
+    ];
+    interrupted.activeTurn = {
+      status: 'interrupted',
+      userMessageId: 'user-1',
+      assistantMessageId: 'assistant-1',
+      primaryPagePath: 'A.md',
+      startedAt: 10,
+      updatedAt: 20,
+      interruptedAt: 20,
+    };
+    const coordinator = new RuntimeCoordinator(
+      host,
+      new MemoryConversationStore(new Map([['a', interrupted]])),
+      () => createFakeRuntime({}),
+    );
+
+    await coordinator.continueInterrupted('a', 'A.md');
+
+    const completed = await coordinator.getSnapshot('a');
+    const continuation = completed.conversation?.messages.at(-2);
+    assert.equal(completed.status, 'completed');
+    assert.equal(continuation?.displayContent, 'Continue');
+    assert.match(continuation?.content ?? '', /Continue from where/);
+    assert.equal(completed.conversation?.sessionId, 'session:a');
+  });
+
+  it('persists interruption during normal plugin cleanup', async () => {
+    const gate = deferred();
+    const conversations = new Map([['a', conversation('a')]]);
+    const coordinator = new RuntimeCoordinator(
+      host,
+      new MemoryConversationStore(conversations),
+      () => createFakeRuntime({
+        gateByConversation: new Map([['a', gate.promise]]),
+        partialBeforeGate: 'saved before cleanup',
+      }),
+    );
+
+    const task = coordinator.send('a', 'work', 'A.md');
+    await new Promise(resolve => setImmediate(resolve));
+    coordinator.cleanup();
+    await new Promise(resolve => setImmediate(resolve));
+
+    assert.equal(conversations.get('a')?.activeTurn?.status, 'interrupted');
+    assert.equal(
+      conversations.get('a')?.messages.at(-1)?.content,
+      'saved before cleanup',
+    );
+
+    gate.resolve();
+    await task;
+    assert.equal(conversations.get('a')?.activeTurn?.status, 'interrupted');
   });
 });

@@ -49,12 +49,17 @@ runtime accepts only notifications matching its current `threadId` and
 
 - Conversation files use a versioned envelope under
   `.threadleaf/conversations/<id>.json`. Legacy unversioned Threadleaf files are
-  read without modification and are upgraded on their next normal save.
+  read without modification, version 1 envelopes remain readable, and both are
+  upgraded to the current schema on their next normal save.
 - Existing JSON files are updated through Obsidian's atomic `process` API. New
   files are written to a unique sibling temporary file and renamed into place.
 - Startup reconciliation removes page-index references only when the referenced
   conversation file is definitely missing. Read failures and unreferenced
   conversation files are preserved for recovery instead of being deleted.
+- A non-terminal turn persists its user and assistant message ids, source page,
+  status, and timestamps. On plugin restart, `running` and `waiting-approval`
+  states become `interrupted`; partial assistant output remains visible and the
+  lost live turn is never presented as still running.
 
 ## Current boundaries
 

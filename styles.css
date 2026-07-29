@@ -53,6 +53,12 @@
     0 8px 24px rgb(0 0 0 / 28%);
 }
 
+.threadleaf-floating-button.threadleaf-floating-button--interrupted {
+  box-shadow:
+    0 0 0 3px var(--color-orange),
+    0 8px 24px rgb(0 0 0 / 28%);
+}
+
 .threadleaf-floating-button__badge {
   align-items: center;
   background: var(--color-red);
@@ -205,6 +211,23 @@
   padding: var(--size-4-3);
 }
 
+.threadleaf-view__interrupted {
+  background: var(--background-modifier-warning);
+  border: 1px solid var(--color-orange);
+  border-radius: var(--radius-m);
+  padding: var(--size-4-3);
+}
+
+.threadleaf-view__interrupted p {
+  margin: var(--size-4-2) 0;
+}
+
+.threadleaf-view__interrupted-actions {
+  display: flex;
+  gap: var(--size-4-2);
+  justify-content: flex-end;
+}
+
 .threadleaf-view__approval p {
   margin: var(--size-4-2) 0;
 }
@@ -248,4 +271,8 @@
 
 .threadleaf-view__status--failed {
   color: var(--color-red);
+}
+
+.threadleaf-view__status--interrupted {
+  color: var(--color-orange);
 }
