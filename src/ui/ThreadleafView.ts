@@ -13,6 +13,9 @@ import type {
 export const VIEW_TYPE_THREADLEAF = 'threadleaf-agent-view';
 
 export class ThreadleafView extends ItemView {
+  private draftPagePath: string | null = null;
+  private conversationCreationFlights = new Map<string, Promise<string>>();
+
   constructor(
     leaf: WorkspaceLeaf,
     private readonly router: PageConversationRouter,
@@ -38,16 +41,27 @@ export class ThreadleafView extends ItemView {
   async onOpen(): Promise<void> {
     void this.renderRoute(this.router.getRoute());
     this.register(this.router.onChange(route => {
+      if (this.draftPagePath && this.draftPagePath !== route.page?.path) {
+        this.draftPagePath = null;
+      }
       void this.renderRoute(route);
     }));
     this.register(this.runtimeCoordinator.onChange((conversationId, snapshot) => {
-      if (conversationId === this.router.getRoute().activeConversationId) {
-        this.renderConversation(this.router.getRoute(), snapshot);
+      const route = this.router.getRoute();
+      if (
+        this.draftPagePath !== route.page?.path
+        && conversationId === route.activeConversationId
+      ) {
+        this.renderConversation(route, snapshot);
       }
     }));
   }
 
   private async renderRoute(route: PageConversationRoute): Promise<void> {
+    if (this.draftPagePath === route.page?.path) {
+      this.renderConversation(route, null);
+      return;
+    }
     const conversationId = route.activeConversationId;
     if (!conversationId) {
       this.renderConversation(route, null);
@@ -88,9 +102,16 @@ export class ThreadleafView extends ItemView {
 
     const conversationBar = this.contentEl.createDiv('threadleaf-view__conversation-bar');
     if (route.conversationIds.length > 0) {
+      const isDraft = this.draftPagePath === page.path;
       const selector = conversationBar.createEl('select', {
         cls: 'dropdown threadleaf-view__conversation-select',
       });
+      if (isDraft) {
+        selector.createEl('option', {
+          value: '',
+          text: 'New conversation',
+        });
+      }
       for (const conversationId of route.conversationIds) {
         selector.createEl('option', {
           value: conversationId,
@@ -99,8 +120,12 @@ export class ThreadleafView extends ItemView {
             : `Conversation ${conversationId.slice(0, 8)}`,
         });
       }
-      selector.value = route.activeConversationId ?? '';
+      selector.value = isDraft ? '' : route.activeConversationId ?? '';
       selector.addEventListener('change', () => {
+        if (!selector.value) {
+          return;
+        }
+        this.draftPagePath = null;
         void this.router.selectConversation(selector.value);
       });
     }
@@ -110,26 +135,17 @@ export class ThreadleafView extends ItemView {
       text: 'New',
     });
     newButton.addEventListener('click', () => {
-      void this.createConversation();
+      this.startDraft();
     });
 
-    if (!snapshot?.conversation) {
-      const emptyState = this.contentEl.createDiv('threadleaf-view__empty');
-      emptyState.createEl('p', {
-        text: 'Start a conversation for this page.',
-      });
-      const startButton = emptyState.createEl('button', {
-        cls: 'mod-cta',
-        text: 'New conversation',
-      });
-      startButton.addEventListener('click', () => {
-        void this.createConversation();
-      });
-      return;
-    }
-
     const messages = this.contentEl.createDiv('threadleaf-view__messages');
-    for (const message of snapshot.conversation.messages) {
+    if (!snapshot?.conversation) {
+      messages.createDiv({
+        cls: 'threadleaf-view__empty',
+        text: `Ask anything about ${page.basename}.`,
+      });
+    }
+    for (const message of snapshot?.conversation?.messages ?? []) {
       const messageElement = messages.createDiv({
         cls: `threadleaf-message threadleaf-message--${message.role}`,
       });
@@ -152,11 +168,11 @@ export class ThreadleafView extends ItemView {
       }
     }
 
-    if (snapshot.pendingApproval) {
+    if (snapshot?.pendingApproval) {
       this.renderApproval(snapshot);
     }
 
-    if (snapshot.error) {
+    if (snapshot?.error) {
       this.contentEl.createDiv({
         cls: 'threadleaf-view__error',
         text: snapshot.error,
@@ -172,19 +188,22 @@ export class ThreadleafView extends ItemView {
       },
     });
     const actions = composer.createDiv('threadleaf-view__composer-actions');
+    const status = snapshot?.status ?? 'idle';
     actions.createDiv({
-      cls: `threadleaf-view__status threadleaf-view__status--${snapshot.status}`,
-      text: this.statusLabel(snapshot.status),
+      cls: `threadleaf-view__status threadleaf-view__status--${status}`,
+      text: this.statusLabel(status),
     });
-    const isRunning = snapshot.status === 'running'
-      || snapshot.status === 'waiting-approval';
+    const isRunning = status === 'running' || status === 'waiting-approval';
     const sendButton = actions.createEl('button', {
       cls: 'mod-cta',
       text: isRunning ? 'Stop' : 'Send',
     });
     sendButton.addEventListener('click', () => {
       if (isRunning) {
-        this.runtimeCoordinator.cancel(snapshot.conversation!.id);
+        const conversationId = snapshot?.conversation?.id;
+        if (conversationId) {
+          this.runtimeCoordinator.cancel(conversationId);
+        }
         return;
       }
       void this.send(input.value);
@@ -221,30 +240,62 @@ export class ThreadleafView extends ItemView {
     });
   }
 
-  private async createConversation(): Promise<void> {
-    const page = this.router.getRoute().page;
-    if (!page) {
+  private startDraft(): void {
+    const route = this.router.getRoute();
+    if (!route.page) {
       return;
     }
-    const conversation = await this.conversations.create(this.defaultModel);
-    await this.router.associateConversation(conversation.id);
+    this.draftPagePath = route.page.path;
+    this.renderConversation(route, null);
   }
 
   private async send(rawText: string): Promise<void> {
     const route = this.router.getRoute();
     const text = rawText.trim();
-    if (!route.page || !route.activeConversationId || !text) {
+    if (!route.page || !text) {
       return;
     }
+    const pagePath = route.page.path;
     try {
+      const conversationId = this.draftPagePath === pagePath
+        || !route.activeConversationId
+        ? await this.ensureConversationForPage(pagePath)
+        : route.activeConversationId;
       await this.runtimeCoordinator.send(
-        route.activeConversationId,
+        conversationId,
         text,
-        route.page.path,
+        pagePath,
       );
     } catch (error) {
       new Notice(error instanceof Error ? error.message : String(error));
     }
+  }
+
+  private async ensureConversationForPage(pagePath: string): Promise<string> {
+    let flight = this.conversationCreationFlights.get(pagePath);
+    if (!flight) {
+      flight = this.createConversationForPage(pagePath);
+      this.conversationCreationFlights.set(pagePath, flight);
+    }
+    try {
+      return await flight;
+    } finally {
+      if (this.conversationCreationFlights.get(pagePath) === flight) {
+        this.conversationCreationFlights.delete(pagePath);
+      }
+    }
+  }
+
+  private async createConversationForPage(pagePath: string): Promise<string> {
+    const conversation = await this.conversations.create(this.defaultModel);
+    await this.router.associateConversationForPage(pagePath, conversation.id);
+    if (this.draftPagePath === pagePath) {
+      this.draftPagePath = null;
+      if (this.router.getRoute().page?.path === pagePath) {
+        void this.renderRoute(this.router.getRoute());
+      }
+    }
+    return conversation.id;
   }
 
   private statusLabel(status: ConversationRuntimeSnapshot['status']): string {
