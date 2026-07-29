@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "build": "node esbuild.config.mjs production",
+    "deploy:local": "node scripts/deploy-local.mjs",
     "dev": "node esbuild.config.mjs",
     "test": "tsx --test tests/**/*.test.ts",
     "typecheck": "tsc --noEmit"

@@ -13,9 +13,11 @@ Selected implementation code was copied once from:
 
 ## Imported boundary
 
-The initial import contains 67 TypeScript files: the dependency closure rooted
-at Claudian's provider-neutral `ChatRuntime`, shared chat types, and
-`CodexChatRuntime`.
+The initial import selected 67 TypeScript files from the dependency closure
+rooted at Claudian's provider-neutral `ChatRuntime`, shared chat types, and
+`CodexChatRuntime`. Four registry/projection files were subsequently removed
+after Threadleaf replaced their global multi-provider coupling with its own
+direct Codex settings boundary.
 
 The imported implementation covers:
 

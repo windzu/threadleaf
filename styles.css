@@ -31,7 +31,15 @@
 }
 
 .threadleaf-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-3);
+  height: 100%;
   padding: var(--size-4-4);
+}
+
+.threadleaf-view__header h2 {
+  margin: var(--size-4-1) 0;
 }
 
 .threadleaf-view__eyebrow {
@@ -51,4 +59,137 @@
   border-radius: var(--radius-s);
   color: var(--text-muted);
   padding: var(--size-4-3);
+}
+
+.threadleaf-view__conversation-bar,
+.threadleaf-view__composer-actions,
+.threadleaf-view__approval-actions {
+  align-items: center;
+  display: flex;
+  gap: var(--size-4-2);
+}
+
+.threadleaf-view__conversation-select {
+  min-width: 0;
+  width: 100%;
+}
+
+.threadleaf-view__new-conversation {
+  flex: 0 0 auto;
+}
+
+.threadleaf-view__empty {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.threadleaf-view__messages {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--size-4-3);
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: var(--size-4-1);
+}
+
+.threadleaf-message {
+  border-radius: var(--radius-m);
+  padding: var(--size-4-3);
+}
+
+.threadleaf-message--user {
+  align-self: flex-end;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  max-width: 88%;
+}
+
+.threadleaf-message--assistant {
+  background: var(--background-secondary);
+}
+
+.threadleaf-message__role {
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  margin-bottom: var(--size-4-1);
+  opacity: 0.72;
+}
+
+.threadleaf-message__content {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.threadleaf-message__tools {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-1);
+  margin-top: var(--size-4-2);
+}
+
+.threadleaf-tool {
+  background: var(--background-primary-alt);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  padding: var(--size-4-1) var(--size-4-2);
+}
+
+.threadleaf-view__approval {
+  background: var(--background-modifier-warning);
+  border: 1px solid var(--color-orange);
+  border-radius: var(--radius-m);
+  padding: var(--size-4-3);
+}
+
+.threadleaf-view__approval p {
+  margin: var(--size-4-2) 0;
+}
+
+.threadleaf-view__error {
+  background: var(--background-modifier-error);
+  border-radius: var(--radius-s);
+  color: var(--text-error);
+  padding: var(--size-4-2);
+}
+
+.threadleaf-view__composer {
+  border-top: 1px solid var(--background-modifier-border);
+  padding-top: var(--size-4-3);
+}
+
+.threadleaf-view__input {
+  min-height: 78px;
+  resize: vertical;
+  width: 100%;
+}
+
+.threadleaf-view__composer-actions {
+  justify-content: space-between;
+  margin-top: var(--size-4-2);
+}
+
+.threadleaf-view__status {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.threadleaf-view__status--running,
+.threadleaf-view__status--waiting-approval {
+  color: var(--color-orange);
+}
+
+.threadleaf-view__status--completed {
+  color: var(--color-green);
+}
+
+.threadleaf-view__status--failed {
+  color: var(--color-red);
 }

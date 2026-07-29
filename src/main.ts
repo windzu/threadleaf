@@ -1,11 +1,18 @@
 import { Plugin } from 'obsidian';
 
 import {
+  mergeThreadleafSettings,
+} from './app/settings';
+import { ThreadleafProviderHost } from './app/ThreadleafProviderHost';
+import type { ThreadleafSettings } from './core/types';
+import { ConversationRepository } from './conversations/ConversationRepository';
+import {
   PageAgentIndex,
   type PageAgentIndexDocument,
 } from './page-context/PageAgentIndex';
 import { PageContextResolver } from './page-context/PageContextResolver';
 import { PageConversationRouter } from './page-context/PageConversationRouter';
+import { RuntimeCoordinator } from './runtime/RuntimeCoordinator';
 import { JsonFileStore } from './storage/JsonFileStore';
 import { FloatingAgentButton } from './ui/FloatingAgentButton';
 import { ThreadleafView, VIEW_TYPE_THREADLEAF } from './ui/ThreadleafView';
@@ -15,8 +22,23 @@ export default class ThreadleafPlugin extends Plugin {
   private pageContext: PageContextResolver | null = null;
   private pageIndex: PageAgentIndex | null = null;
   private router: PageConversationRouter | null = null;
+  private conversations: ConversationRepository | null = null;
+  private runtimeCoordinator: RuntimeCoordinator | null = null;
+  private threadleafSettings: ThreadleafSettings | null = null;
 
   async onload(): Promise<void> {
+    this.threadleafSettings = mergeThreadleafSettings(await this.loadData());
+    this.conversations = new ConversationRepository(this.app.vault.adapter);
+    const providerHost = new ThreadleafProviderHost(
+      this.app,
+      this.threadleafSettings,
+      this.manifest,
+    );
+    this.runtimeCoordinator = new RuntimeCoordinator(
+      providerHost,
+      this.conversations,
+    );
+
     const pageIndexStore = new JsonFileStore<PageAgentIndexDocument>(
       this.app.vault.adapter,
       '.threadleaf/page-agent-index.json',
@@ -29,13 +51,20 @@ export default class ThreadleafPlugin extends Plugin {
 
     this.registerView(
       VIEW_TYPE_THREADLEAF,
-      leaf => new ThreadleafView(leaf, this.requireRouter()),
+      leaf => new ThreadleafView(
+        leaf,
+        this.requireRouter(),
+        this.requireConversations(),
+        this.requireRuntimeCoordinator(),
+        this.requireSettings().model,
+      ),
     );
 
     this.pageContext.start();
     this.router.start();
     this.register(() => this.pageContext?.stop());
     this.register(() => this.router?.stop());
+    this.register(() => this.runtimeCoordinator?.cleanup());
     this.registerEvent(
       this.app.vault.on('rename', (file, oldPath) => {
         if (!this.pageIndex || !this.router) {
@@ -50,7 +79,14 @@ export default class ThreadleafPlugin extends Plugin {
     this.floatingButton = new FloatingAgentButton(this.app, () => {
       void this.openAgent();
     });
-    this.floatingButton.mount();
+    this.app.workspace.onLayoutReady(() => {
+      this.floatingButton?.mount();
+    });
+    this.registerEvent(
+      this.app.workspace.on('layout-change', () => {
+        this.floatingButton?.mount();
+      }),
+    );
     this.register(() => this.floatingButton?.unmount());
 
     this.addCommand({
@@ -85,5 +121,26 @@ export default class ThreadleafPlugin extends Plugin {
       throw new Error('Threadleaf page conversation router is not initialized.');
     }
     return this.router;
+  }
+
+  private requireConversations(): ConversationRepository {
+    if (!this.conversations) {
+      throw new Error('Threadleaf conversation repository is not initialized.');
+    }
+    return this.conversations;
+  }
+
+  private requireRuntimeCoordinator(): RuntimeCoordinator {
+    if (!this.runtimeCoordinator) {
+      throw new Error('Threadleaf runtime coordinator is not initialized.');
+    }
+    return this.runtimeCoordinator;
+  }
+
+  private requireSettings(): ThreadleafSettings {
+    if (!this.threadleafSettings) {
+      throw new Error('Threadleaf settings are not initialized.');
+    }
+    return this.threadleafSettings;
   }
 }

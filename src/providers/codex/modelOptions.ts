@@ -1,5 +1,5 @@
-import { getRuntimeEnvironmentVariables } from '../../core/providers/providerEnvironment';
 import type { ProviderUIOption } from '../../core/providers/types';
+import { parseEnvironmentVariables } from '../../utils/env';
 import { getCodexModelsInPickerOrder, getDefaultCodexModel } from './models';
 import {
   encodeCodexModelSelectionId,
@@ -18,7 +18,13 @@ function createCustomCodexModelOption(modelId: string, description: string): Pro
 }
 
 function getConfiguredEnvModel(settings: Record<string, unknown>): string | null {
-  const modelId = getRuntimeEnvironmentVariables(settings, 'codex').OPENAI_MODEL?.trim();
+  const codexEnvironment = getCodexProviderSettings(settings).environmentVariables;
+  const sharedEnvironment = typeof settings.sharedEnvironmentVariables === 'string'
+    ? settings.sharedEnvironmentVariables
+    : '';
+  const modelId = parseEnvironmentVariables(
+    [sharedEnvironment, codexEnvironment].filter(Boolean).join('\n'),
+  ).OPENAI_MODEL?.trim();
   return modelId ? modelId : null;
 }
 

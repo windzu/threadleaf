@@ -73,10 +73,29 @@ See [Project Vision](docs/VISION.md) for the product boundary and architectural 
 
 ## Status
 
-Foundation implementation.
+Early working prototype.
 
-The first milestone focuses on macOS desktop, a single Obsidian vault,
-Markdown and Bases pages, and Codex-backed conversations.
+Implemented:
+
+- independent Obsidian plugin shell and `.threadleaf` storage;
+- floating page-level entry and native right-side Agent view;
+- Markdown and Bases page detection;
+- unlimited page-conversation mappings and last-conversation restoration;
+- mapping migration after file or folder renames;
+- Codex app-server conversations, streaming, tool status, cancellation, and approvals;
+- background-safe runtimes that are not cancelled by page navigation;
+- local deployment to a development vault.
+
+Still in progress:
+
+- production message and diff rendering;
+- `@` note mentions and context picker;
+- ask-user forms and richer approval choices;
+- settings and model discovery;
+- running/completed badges on the floating entry;
+- split-pane, pop-out-window, and failure-recovery hardening.
+
+The first milestone focuses on macOS desktop and a single Obsidian vault.
 
 ## Naming
 

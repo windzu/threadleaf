@@ -29,13 +29,23 @@ export class JsonFileStore<T> implements JsonStore<T> {
     const operation = this.writeQueue.then(async () => {
       const normalizedPath = normalizePath(this.path);
       const parentPath = normalizedPath.slice(0, normalizedPath.lastIndexOf('/'));
-      if (parentPath && !await this.adapter.exists(parentPath)) {
-        await this.adapter.mkdir(parentPath);
-      }
+      await this.ensureDirectory(parentPath);
       await this.adapter.write(normalizedPath, snapshot);
     });
 
     this.writeQueue = operation.catch(() => undefined);
     return operation;
+  }
+
+  private async ensureDirectory(path: string): Promise<void> {
+    if (!path || await this.adapter.exists(path)) {
+      return;
+    }
+
+    const parentPath = path.slice(0, path.lastIndexOf('/'));
+    await this.ensureDirectory(parentPath);
+    if (!await this.adapter.exists(path)) {
+      await this.adapter.mkdir(path);
+    }
   }
 }

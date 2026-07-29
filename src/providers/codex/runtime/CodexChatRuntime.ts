@@ -7,9 +7,7 @@ import {
   computeSystemPromptKey,
   type SystemPromptSettings,
 } from '../../../core/prompt/mainAgent';
-import { getProviderSettingsSnapshotWithModel } from '../../../core/providers/conversationModel';
 import type { ProviderHost } from '../../../core/providers/ProviderHost';
-import { ProviderSettingsCoordinator } from '../../../core/providers/ProviderSettingsCoordinator';
 import type { ProviderCapabilities, ProviderId } from '../../../core/providers/types';
 import type { ChatRuntime } from '../../../core/runtime/ChatRuntime';
 import type {
@@ -907,16 +905,10 @@ export class CodexChatRuntime implements ChatRuntime {
   }
 
   private getProviderSettings(): Record<string, unknown> {
-    return this.currentConversationModel
-      ? getProviderSettingsSnapshotWithModel(
-          this.plugin.settings,
-          this.providerId,
-          this.currentConversationModel,
-        )
-      : ProviderSettingsCoordinator.getProviderSettingsSnapshot(
-          this.plugin.settings,
-          this.providerId,
-        );
+    return {
+      ...this.plugin.settings,
+      model: this.currentConversationModel ?? this.plugin.settings.model,
+    };
   }
 
   getAuxiliaryModel(): string | null {

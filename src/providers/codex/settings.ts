@@ -1,5 +1,4 @@
 import { getProviderConfig, setProviderConfig } from '../../core/providers/providerConfig';
-import { getProviderEnvironmentVariables } from '../../core/providers/providerEnvironment';
 import { DEFAULT_REASONING_VALUE } from '../../core/providers/reasoning';
 import type { HostnameCliPaths } from '../../core/types/settings';
 import {
@@ -403,7 +402,6 @@ function getCodexStoredConfig(
       ?? (settings.codexReasoningSummary as CodexReasoningSummary | undefined)
       ?? DEFAULT_CODEX_PROVIDER_CONFIG.reasoningSummary,
     environmentVariables: (config.environmentVariables as string | undefined)
-      ?? getProviderEnvironmentVariables(settings, 'codex')
       ?? DEFAULT_CODEX_PROVIDER_CONFIG.environmentVariables,
     environmentHash: (config.environmentHash as string | undefined)
       ?? (settings.lastCodexEnvHash as string | undefined)
