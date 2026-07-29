@@ -11,6 +11,11 @@ export interface PageAgentIndexDocument {
   pages: Record<string, PageAgentRecord>;
 }
 
+export interface PageAgentIndexReconciliation {
+  repairedPageCount: number;
+  removedReferenceCount: number;
+}
+
 const EMPTY_DOCUMENT: PageAgentIndexDocument = {
   version: 1,
   pages: {},
@@ -120,6 +125,59 @@ export class PageAgentIndex {
       delete this.document.pages[sourcePath];
     }
     await this.persist();
+  }
+
+  async reconcileConversationReferences(
+    exists: (conversationId: string) => Promise<boolean>,
+  ): Promise<PageAgentIndexReconciliation> {
+    this.assertInitialized();
+    const conversationIds = new Set(
+      Object.values(this.document.pages)
+        .flatMap(record => record.conversationIds),
+    );
+    const availability = new Map<string, boolean>();
+    await Promise.all([...conversationIds].map(async conversationId => {
+      try {
+        availability.set(conversationId, await exists(conversationId));
+      } catch {
+        availability.set(conversationId, true);
+      }
+    }));
+
+    let repairedPageCount = 0;
+    let removedReferenceCount = 0;
+    for (const [pagePath, record] of Object.entries(this.document.pages)) {
+      const validIds = [...new Set(record.conversationIds)]
+        .filter(id => availability.get(id) !== false);
+      const removedFromRecord = record.conversationIds.length - validIds.length;
+      const activeConversationId = record.activeConversationId
+        && validIds.includes(record.activeConversationId)
+        ? record.activeConversationId
+        : validIds.at(-1) ?? null;
+      const changed = validIds.length === 0
+        || removedFromRecord > 0
+        || activeConversationId !== record.activeConversationId;
+      if (!changed) {
+        continue;
+      }
+
+      repairedPageCount += 1;
+      removedReferenceCount += removedFromRecord;
+      if (validIds.length === 0) {
+        delete this.document.pages[pagePath];
+      } else {
+        this.document.pages[pagePath] = {
+          conversationIds: validIds,
+          activeConversationId,
+          updatedAt: this.now(),
+        };
+      }
+    }
+
+    if (repairedPageCount > 0) {
+      await this.persist();
+    }
+    return { repairedPageCount, removedReferenceCount };
   }
 
   private mergeRecords(

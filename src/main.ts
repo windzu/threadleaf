@@ -50,6 +50,9 @@ export default class ThreadleafPlugin extends Plugin {
     );
     this.pageIndex = new PageAgentIndex(pageIndexStore);
     await this.pageIndex.initialize();
+    await this.pageIndex.reconcileConversationReferences(
+      conversationId => this.requireConversations().exists(conversationId),
+    );
 
     this.pageContext = new PageContextResolver(this.app);
     this.router = new PageConversationRouter(this.pageContext, this.pageIndex);
