@@ -14,8 +14,9 @@ repository.
 - Run the relevant tests and the complete quality check before publishing.
 - Push the branch and merge it through a pull request.
 - Do not bypass branch protection or use force-push.
-- After merge, switch to `main`, pull with `--ff-only`, delete the merged local
-  branch with `git branch -d`, and prune remote-tracking branches.
+- After merge, switch to `main`, pull with `--ff-only`, verify the exact PR is
+  merged, delete the local branch according to the merge method described in
+  `CONTRIBUTING.md`, and prune remote-tracking branches.
 
 ## Implementation rules
 

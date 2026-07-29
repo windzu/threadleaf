@@ -77,8 +77,14 @@ be deleted by GitHub, so the person who merges the PR must clean up locally:
 
 1. `git switch main`
 2. `git pull --ff-only`
-3. `git branch -d <merged-branch>`
-4. `git fetch --prune`
+3. Confirm the PR is merged with
+   `gh pr view <pr-number> --json state,mergedAt`
+4. Delete the local branch:
+   - use `git branch -d <merged-branch>` after merge or rebase merge;
+   - after squash merge, use `git branch -D <merged-branch>` only after the PR
+     is confirmed merged and the local branch has no unpublished work.
+5. `git fetch --prune`
 
-Use `-d`, not `-D`; if Git reports that the branch is not fully merged, stop
-and investigate instead of forcing deletion.
+Squash merge does not preserve the feature commit as an ancestor of `main`, so
+Git may reject `-d` even though GitHub has merged the PR. Never use `-D` based
+only on a branch name or assumption; verify the exact PR and worktree first.
