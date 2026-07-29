@@ -10,7 +10,6 @@ import type {
   StreamChunk,
 } from '../core/types';
 import type { ConversationStore } from '../conversations/ConversationRepository';
-import { CodexChatRuntime } from '../providers/codex/runtime/CodexChatRuntime';
 
 export type ConversationTaskStatus =
   | 'idle'
@@ -70,9 +69,7 @@ export class RuntimeCoordinator {
   constructor(
     private readonly host: ProviderHost,
     private readonly conversations: ConversationStore,
-    private readonly createRuntime: (host: ProviderHost) => ChatRuntime = (
-      providerHost,
-    ) => new CodexChatRuntime(providerHost),
+    private readonly createRuntime: (host: ProviderHost) => ChatRuntime,
   ) {}
 
   onChange(listener: RuntimeListener): () => void {

@@ -83,6 +83,7 @@ Implemented:
 - unlimited page-conversation mappings and last-conversation restoration;
 - mapping migration after file or folder renames;
 - Codex app-server conversations, streaming, tool status, cancellation, and approvals;
+- one shared Codex app-server process with per-conversation thread routing;
 - background-safe runtimes that are not cancelled by page navigation;
 - local deployment to a development vault.
 
@@ -96,6 +97,9 @@ Still in progress:
 - split-pane, pop-out-window, and failure-recovery hardening.
 
 The first milestone focuses on macOS desktop and a single Obsidian vault.
+
+See [Architecture](docs/ARCHITECTURE.md) for runtime ownership and lifecycle
+invariants.
 
 ## Naming
 
