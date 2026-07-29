@@ -45,6 +45,17 @@ runtime accepts only notifications matching its current `threadId` and
 - Conversation runtime cleanup removes its gateway subscriptions without
   shutting down the shared process.
 
+## Storage invariants
+
+- Conversation files use a versioned envelope under
+  `.threadleaf/conversations/<id>.json`. Legacy unversioned Threadleaf files are
+  read without modification and are upgraded on their next normal save.
+- Existing JSON files are updated through Obsidian's atomic `process` API. New
+  files are written to a unique sibling temporary file and renamed into place.
+- Startup reconciliation removes page-index references only when the referenced
+  conversation file is definitely missing. Read failures and unreferenced
+  conversation files are preserved for recovery instead of being deleted.
+
 ## Current boundaries
 
 - `src/page-context`: active page detection and page-to-conversation routing.

@@ -1,9 +1,14 @@
 import { randomUUID } from 'node:crypto';
 
-import type { DataAdapter } from 'obsidian';
-
 import type { Conversation } from '../core/types';
-import { JsonFileStore } from '../storage/JsonFileStore';
+import {
+  JsonFileStore,
+  type JsonFileAdapter,
+} from '../storage/JsonFileStore';
+import {
+  decodeConversationDocument,
+  encodeConversationDocument,
+} from './ConversationDocument';
 
 export interface ConversationStore {
   load(conversationId: string): Promise<Conversation | null>;
@@ -11,9 +16,9 @@ export interface ConversationStore {
 }
 
 export class ConversationRepository implements ConversationStore {
-  private stores = new Map<string, JsonFileStore<Conversation>>();
+  private stores = new Map<string, JsonFileStore<unknown>>();
 
-  constructor(private readonly adapter: DataAdapter) {}
+  constructor(private readonly adapter: JsonFileAdapter) {}
 
   async create(selectedModel: string): Promise<Conversation> {
     const now = Date.now();
@@ -32,23 +37,41 @@ export class ConversationRepository implements ConversationStore {
   }
 
   async load(conversationId: string): Promise<Conversation | null> {
-    return this.getStore(conversationId).load();
+    const stored = await this.getStore(conversationId).load();
+    if (stored === null) {
+      return null;
+    }
+    return decodeConversationDocument(stored, conversationId).conversation;
   }
 
   async save(conversation: Conversation): Promise<void> {
     conversation.updatedAt = Date.now();
-    await this.getStore(conversation.id).save(conversation);
+    await this.getStore(conversation.id).save(
+      encodeConversationDocument(conversation),
+    );
   }
 
-  private getStore(conversationId: string): JsonFileStore<Conversation> {
+  async exists(conversationId: string): Promise<boolean> {
+    const path = this.getConversationPath(conversationId);
+    return path ? this.adapter.exists(path) : false;
+  }
+
+  private getStore(conversationId: string): JsonFileStore<unknown> {
+    const path = this.getConversationPath(conversationId);
+    if (!path) {
+      throw new Error(`Invalid conversation id "${conversationId}".`);
+    }
     let store = this.stores.get(conversationId);
     if (!store) {
-      store = new JsonFileStore(
-        this.adapter,
-        `.threadleaf/conversations/${conversationId}.json`,
-      );
+      store = new JsonFileStore(this.adapter, path);
       this.stores.set(conversationId, store);
     }
     return store;
+  }
+
+  private getConversationPath(conversationId: string): string | null {
+    return /^[a-zA-Z0-9_-]+$/.test(conversationId)
+      ? `.threadleaf/conversations/${conversationId}.json`
+      : null;
   }
 }

@@ -9,6 +9,7 @@ import type { JsonStore } from '../../src/storage/JsonFileStore';
 
 class MemoryStore<T> implements JsonStore<T> {
   value: T | null;
+  saveCount = 0;
 
   constructor(initial: T | null = null) {
     this.value = initial;
@@ -19,6 +20,7 @@ class MemoryStore<T> implements JsonStore<T> {
   }
 
   async save(value: T): Promise<void> {
+    this.saveCount += 1;
     this.value = structuredClone(value);
   }
 }
@@ -62,5 +64,44 @@ describe('PageAgentIndex', () => {
       index.get('Archive/Nested/Beta.base')?.conversationIds,
       ['beta'],
     );
+  });
+
+  it('repairs missing references while preserving uncertain and orphaned data', async () => {
+    const store = new MemoryStore<PageAgentIndexDocument>({
+      version: 1,
+      pages: {
+        'A.md': {
+          conversationIds: ['existing', 'missing', 'uncertain', 'existing'],
+          activeConversationId: 'missing',
+          updatedAt: 1,
+        },
+        'B.md': {
+          conversationIds: ['missing'],
+          activeConversationId: 'missing',
+          updatedAt: 2,
+        },
+      },
+    });
+    const index = new PageAgentIndex(store, () => 100);
+    await index.initialize();
+
+    const result = await index.reconcileConversationReferences(async id => {
+      if (id === 'uncertain') {
+        throw new Error('Temporary adapter failure');
+      }
+      return id === 'existing';
+    });
+
+    assert.deepEqual(result, {
+      repairedPageCount: 2,
+      removedReferenceCount: 3,
+    });
+    assert.deepEqual(index.get('A.md'), {
+      conversationIds: ['existing', 'uncertain'],
+      activeConversationId: 'uncertain',
+      updatedAt: 100,
+    });
+    assert.equal(index.get('B.md'), null);
+    assert.equal(store.saveCount, 1);
   });
 });
