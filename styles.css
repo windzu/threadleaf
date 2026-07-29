@@ -45,3 +45,10 @@
   color: var(--text-muted);
   overflow-wrap: anywhere;
 }
+
+.threadleaf-view__conversation-state {
+  background: var(--background-secondary);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  padding: var(--size-4-3);
+}

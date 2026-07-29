@@ -1,15 +1,24 @@
-import type { App, EventRef, TFile, WorkspaceLeaf } from 'obsidian';
+import type { App, EventRef, TFile } from 'obsidian';
 
 export interface ActivePage {
   path: string;
   basename: string;
   extension: string;
-  leaf: WorkspaceLeaf;
 }
 
-export class PageContextResolver {
+type PageContextListener = (page: ActivePage | null) => void;
+
+export interface PageContextSource {
+  getActivePage(): ActivePage | null;
+  onChange(listener: PageContextListener): () => void;
+}
+
+const SUPPORTED_PAGE_EXTENSIONS = new Set(['md', 'base']);
+
+export class PageContextResolver implements PageContextSource {
   private activePage: ActivePage | null = null;
   private eventRefs: EventRef[] = [];
+  private listeners = new Set<PageContextListener>();
 
   constructor(private readonly app: App) {}
 
@@ -32,18 +41,33 @@ export class PageContextResolver {
     return this.activePage;
   }
 
-  private refresh(): void {
-    const leaf = this.app.workspace.getMostRecentLeaf();
-    const file = this.app.workspace.getActiveFile();
-    this.activePage = leaf && file ? this.toActivePage(file, leaf) : null;
+  onChange(listener: PageContextListener): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
   }
 
-  private toActivePage(file: TFile, leaf: WorkspaceLeaf): ActivePage {
+  private refresh(): void {
+    const file = this.app.workspace.getActiveFile();
+    const nextPage = file && SUPPORTED_PAGE_EXTENSIONS.has(file.extension)
+      ? this.toActivePage(file)
+      : null;
+    if (nextPage?.path === this.activePage?.path) {
+      return;
+    }
+
+    this.activePage = nextPage;
+    for (const listener of this.listeners) {
+      listener(this.activePage);
+    }
+  }
+
+  private toActivePage(file: TFile): ActivePage {
     return {
       path: file.path,
       basename: file.basename,
       extension: file.extension,
-      leaf,
     };
   }
 }

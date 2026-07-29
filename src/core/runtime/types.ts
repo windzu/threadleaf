@@ -45,7 +45,7 @@ export type AskUserQuestionCallback = (
 export interface ChatTurnRequest {
   text: string;
   images?: ImageAttachment[];
-  currentNotePath?: string;
+  primaryPagePath?: string;
   editorSelection?: EditorSelectionContext | null;
   browserSelection?: BrowserSelectionContext | null;
   canvasSelection?: CanvasSelectionContext | null;

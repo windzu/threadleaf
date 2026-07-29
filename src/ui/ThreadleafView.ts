@@ -1,13 +1,16 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 
-import type { ActivePage } from '../page-context/PageContextResolver';
+import type {
+  PageConversationRoute,
+  PageConversationRouter,
+} from '../page-context/PageConversationRouter';
 
 export const VIEW_TYPE_THREADLEAF = 'threadleaf-agent-view';
 
 export class ThreadleafView extends ItemView {
   constructor(
     leaf: WorkspaceLeaf,
-    private readonly getActivePage: () => ActivePage | null,
+    private readonly router: PageConversationRouter,
   ) {
     super(leaf);
   }
@@ -25,13 +28,12 @@ export class ThreadleafView extends ItemView {
   }
 
   async onOpen(): Promise<void> {
-    this.render();
-    this.registerEvent(this.app.workspace.on('active-leaf-change', () => this.render()));
-    this.registerEvent(this.app.workspace.on('file-open', () => this.render()));
+    this.render(this.router.getRoute());
+    this.register(this.router.onChange(route => this.render(route)));
   }
 
-  private render(): void {
-    const page = this.getActivePage();
+  private render(route: PageConversationRoute): void {
+    const page = route.page;
     this.contentEl.empty();
     this.contentEl.addClass('threadleaf-view');
     this.contentEl.createEl('div', {
@@ -47,5 +49,13 @@ export class ThreadleafView extends ItemView {
         ? `Context: ${page.path}`
         : 'Open a Markdown or Bases page to start a page-native conversation.',
     });
+    if (page) {
+      this.contentEl.createEl('p', {
+        cls: 'threadleaf-view__conversation-state',
+        text: route.activeConversationId
+          ? `Conversation: ${route.activeConversationId}`
+          : 'No conversation for this page yet.',
+      });
+    }
   }
 }

@@ -19,8 +19,8 @@ export function encodeCodexTurn(request: ChatTurnRequest): PreparedChatTurn {
   }
 
   const sections: string[] = [
-    request.currentNotePath
-      ? appendCurrentNote(request.text, request.currentNotePath)
+    request.primaryPagePath
+      ? appendCurrentNote(request.text, request.primaryPagePath)
       : request.text,
   ];
 

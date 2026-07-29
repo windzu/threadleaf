@@ -45,7 +45,7 @@ export interface ChatMessage {
   timestamp: number;
   toolCalls?: ToolCallInfo[];
   contentBlocks?: ContentBlock[];
-  currentNote?: string;
+  primaryPagePath?: string;
   images?: ImageAttachment[];
   /** True if this message represents a user interrupt (from SDK storage). */
   isInterrupt?: boolean;
@@ -76,7 +76,6 @@ export interface Conversation {
   /** Opaque provider-owned state bag (session tracking, fork metadata, etc.). */
   providerState?: Record<string, unknown>;
   messages: ChatMessage[];
-  currentNote?: string;
   /** Session-specific external context paths (directories with full access). Resets on new session. */
   externalContextPaths?: string[];
   /** Context window usage information. */
@@ -122,7 +121,6 @@ export interface SessionMetadata {
   selectedModel?: string;
   /** Opaque provider-owned state bag. */
   providerState?: Record<string, unknown>;
-  currentNote?: string;
   externalContextPaths?: string[];
   enabledMcpServers?: string[];
   usage?: UsageInfo;

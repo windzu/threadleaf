@@ -131,10 +131,10 @@ export function truncateToolResult(result: string, maxLength = 500): string {
 }
 
 export function formatContextLine(message: ChatMessage): string | null {
-  if (!message.currentNote) {
+  if (!message.primaryPagePath) {
     return null;
   }
-  return formatCurrentNote(message.currentNote);
+  return formatCurrentNote(message.primaryPagePath);
 }
 
 /**
