@@ -63,9 +63,17 @@ export class PageConversationRouter {
       throw new Error('Cannot associate a conversation without an active page.');
     }
 
-    const record = await this.index.associate(page.path, conversationId);
-    if (this.route.page?.path === page.path) {
-      this.publish(page, record);
+    await this.associateConversationForPage(page.path, conversationId);
+  }
+
+  async associateConversationForPage(
+    pagePath: string,
+    conversationId: string,
+  ): Promise<void> {
+    const record = await this.index.associate(pagePath, conversationId);
+    const activePage = this.route.page;
+    if (activePage?.path === pagePath) {
+      this.publish(activePage, record);
     }
   }
 

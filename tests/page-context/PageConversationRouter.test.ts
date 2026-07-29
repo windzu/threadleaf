@@ -78,4 +78,24 @@ describe('PageConversationRouter', () => {
     pageContext.open('A.md');
     assert.equal(router.getRoute().activeConversationId, 'a-1');
   });
+
+  it('associates a lazily created conversation with its originating page', async () => {
+    const index = new PageAgentIndex(
+      new MemoryStore<PageAgentIndexDocument>(),
+    );
+    await index.initialize();
+    const pageContext = new FakePageContext();
+    const router = new PageConversationRouter(pageContext, index);
+    router.start();
+
+    pageContext.open('A.md');
+    pageContext.open('B.md');
+    await router.associateConversationForPage('A.md', 'a-lazy');
+
+    assert.equal(router.getRoute().page?.path, 'B.md');
+    assert.equal(router.getRoute().activeConversationId, null);
+
+    pageContext.open('A.md');
+    assert.equal(router.getRoute().activeConversationId, 'a-lazy');
+  });
 });
