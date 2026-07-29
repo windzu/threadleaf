@@ -13,6 +13,7 @@ const IDLE_ACTIVITY: RuntimeActivitySummary = {
 export class FloatingAgentButton {
   private element: HTMLButtonElement | null = null;
   private activity = IDLE_ACTIVITY;
+  private visible = true;
 
   constructor(
     private readonly app: App,
@@ -46,7 +47,13 @@ export class FloatingAgentButton {
     setIcon(button, iconId);
     button.addEventListener('click', this.onClick);
     this.element = button;
+    this.renderVisibility();
     this.renderActivity();
+  }
+
+  setVisible(visible: boolean): void {
+    this.visible = visible;
+    this.renderVisibility();
   }
 
   setActivity(activity: RuntimeActivitySummary): void {
@@ -94,6 +101,10 @@ export class FloatingAgentButton {
     const label = this.getActivityLabel();
     button.setAttribute('aria-label', label);
     setTooltip(button, label);
+  }
+
+  private renderVisibility(): void {
+    this.element?.toggleAttribute('hidden', !this.visible);
   }
 
   private getActivityLabel(): string {

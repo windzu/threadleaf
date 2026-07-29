@@ -87,6 +87,12 @@ export default class ThreadleafPlugin extends Plugin {
     this.floatingButton = new FloatingAgentButton(this.app, () => {
       void this.openAgent();
     });
+    const updateFloatingVisibility = (): void => {
+      const isAgentVisible = this.app.workspace
+        .getLeavesOfType(VIEW_TYPE_THREADLEAF)
+        .some(leaf => leaf.view.containerEl.isShown());
+      this.floatingButton?.setVisible(!isAgentVisible);
+    };
     const updateFloatingActivity = (): void => {
       const activeConversationId = this.router?.getRoute().activeConversationId ?? null;
       const activity = this.runtimeCoordinator?.getActivitySummary(
@@ -101,10 +107,12 @@ export default class ThreadleafPlugin extends Plugin {
     updateFloatingActivity();
     this.app.workspace.onLayoutReady(() => {
       this.floatingButton?.mount();
+      updateFloatingVisibility();
     });
     this.registerEvent(
       this.app.workspace.on('layout-change', () => {
         this.floatingButton?.mount();
+        updateFloatingVisibility();
       }),
     );
     this.register(() => this.floatingButton?.unmount());
@@ -134,6 +142,7 @@ export default class ThreadleafPlugin extends Plugin {
       active: true,
     });
     this.app.workspace.revealLeaf(leaf);
+    this.floatingButton?.setVisible(false);
   }
 
   private requireRouter(): PageConversationRouter {
