@@ -1,7 +1,18 @@
 import { App, getIconIds, setIcon, setTooltip } from 'obsidian';
 
+import type { RuntimeActivitySummary } from '../runtime/RuntimeCoordinator';
+
+const IDLE_ACTIVITY: RuntimeActivitySummary = {
+  status: 'idle',
+  badgeCount: 0,
+  runningCount: 0,
+  waitingApprovalCount: 0,
+  failedCount: 0,
+};
+
 export class FloatingAgentButton {
   private element: HTMLButtonElement | null = null;
+  private activity = IDLE_ACTIVITY;
 
   constructor(
     private readonly app: App,
@@ -33,9 +44,14 @@ export class FloatingAgentButton {
         : 'gem';
     button.dataset.threadleafIcon = iconId;
     setIcon(button, iconId);
-    setTooltip(button, 'Open Threadleaf');
     button.addEventListener('click', this.onClick);
     this.element = button;
+    this.renderActivity();
+  }
+
+  setActivity(activity: RuntimeActivitySummary): void {
+    this.activity = activity;
+    this.renderActivity();
   }
 
   unmount(): void {
@@ -45,5 +61,59 @@ export class FloatingAgentButton {
     this.element.removeEventListener('click', this.onClick);
     this.element.remove();
     this.element = null;
+  }
+
+  private renderActivity(): void {
+    const button = this.element;
+    if (!button) {
+      return;
+    }
+
+    for (const status of [
+      'idle',
+      'running',
+      'waiting-approval',
+      'completed',
+      'failed',
+    ]) {
+      button.removeClass(`threadleaf-floating-button--${status}`);
+    }
+    button.addClass(`threadleaf-floating-button--${this.activity.status}`);
+    button.dataset.threadleafStatus = this.activity.status;
+
+    button.querySelector('.threadleaf-floating-button__badge')?.remove();
+    if (this.activity.badgeCount > 0) {
+      button.createSpan({
+        cls: 'threadleaf-floating-button__badge',
+        text: this.activity.badgeCount > 9
+          ? '9+'
+          : String(this.activity.badgeCount),
+      });
+    }
+
+    const label = this.getActivityLabel();
+    button.setAttribute('aria-label', label);
+    setTooltip(button, label);
+  }
+
+  private getActivityLabel(): string {
+    switch (this.activity.status) {
+      case 'waiting-approval':
+        return `${this.activity.waitingApprovalCount} Threadleaf task${
+          this.activity.waitingApprovalCount === 1 ? '' : 's'
+        } need approval`;
+      case 'running':
+        return `${this.activity.runningCount} Threadleaf task${
+          this.activity.runningCount === 1 ? '' : 's'
+        } running`;
+      case 'failed':
+        return `${this.activity.failedCount} Threadleaf task${
+          this.activity.failedCount === 1 ? '' : 's'
+        } failed`;
+      case 'completed':
+        return 'Threadleaf task completed';
+      default:
+        return 'Open Threadleaf for the current page';
+    }
   }
 }

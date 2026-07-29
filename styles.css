@@ -25,6 +25,58 @@
   transform: translateY(-1px);
 }
 
+.threadleaf-floating-button.threadleaf-floating-button--running {
+  box-shadow:
+    0 0 0 3px var(--color-blue),
+    0 8px 24px rgb(0 0 0 / 28%);
+}
+
+.threadleaf-floating-button.threadleaf-floating-button--waiting-approval {
+  box-shadow:
+    0 0 0 3px var(--color-orange),
+    0 8px 24px rgb(0 0 0 / 28%);
+}
+
+.threadleaf-floating-button.threadleaf-floating-button--completed {
+  box-shadow:
+    0 0 0 3px var(--color-green),
+    0 8px 24px rgb(0 0 0 / 28%);
+}
+
+.threadleaf-floating-button.threadleaf-floating-button--failed {
+  box-shadow:
+    0 0 0 3px var(--color-red),
+    0 8px 24px rgb(0 0 0 / 28%);
+}
+
+.threadleaf-floating-button__badge {
+  align-items: center;
+  background: var(--color-red);
+  border: 2px solid var(--background-primary);
+  border-radius: 999px;
+  color: white;
+  display: flex;
+  font-size: 10px;
+  font-weight: 700;
+  height: 20px;
+  justify-content: center;
+  line-height: 1;
+  min-width: 20px;
+  padding: 0 4px;
+  pointer-events: none;
+  position: absolute;
+  right: -5px;
+  top: -5px;
+}
+
+.threadleaf-floating-button--running .threadleaf-floating-button__badge {
+  background: var(--color-blue);
+}
+
+.threadleaf-floating-button--waiting-approval .threadleaf-floating-button__badge {
+  background: var(--color-orange);
+}
+
 .threadleaf-floating-button svg {
   height: 27px;
   width: 27px;

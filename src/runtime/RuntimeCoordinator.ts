@@ -34,6 +34,21 @@ export interface ConversationRuntimeSnapshot {
   pendingApproval: PendingApproval | null;
 }
 
+export type RuntimeActivityStatus =
+  | 'idle'
+  | 'running'
+  | 'waiting-approval'
+  | 'completed'
+  | 'failed';
+
+export interface RuntimeActivitySummary {
+  status: RuntimeActivityStatus;
+  badgeCount: number;
+  runningCount: number;
+  waitingApprovalCount: number;
+  failedCount: number;
+}
+
 interface RuntimeEntry {
   runtime: ChatRuntime;
   conversation: Conversation | null;
@@ -70,6 +85,64 @@ export class RuntimeCoordinator {
   async getSnapshot(conversationId: string): Promise<ConversationRuntimeSnapshot> {
     const entry = await this.ensureEntry(conversationId);
     return this.snapshot(entry);
+  }
+
+  getActivitySummary(activeConversationId: string | null): RuntimeActivitySummary {
+    const statuses = Array.from(this.entries.values(), entry => entry.status);
+    const runningCount = statuses.filter(
+      status => status === 'running' || status === 'waiting-approval',
+    ).length;
+    const waitingApprovalCount = statuses.filter(
+      status => status === 'waiting-approval',
+    ).length;
+    const failedCount = statuses.filter(status => status === 'failed').length;
+    const activeStatus = activeConversationId
+      ? this.entries.get(activeConversationId)?.status
+      : undefined;
+
+    if (waitingApprovalCount > 0) {
+      return {
+        status: 'waiting-approval',
+        badgeCount: waitingApprovalCount,
+        runningCount,
+        waitingApprovalCount,
+        failedCount,
+      };
+    }
+    if (runningCount > 0) {
+      return {
+        status: 'running',
+        badgeCount: runningCount,
+        runningCount,
+        waitingApprovalCount,
+        failedCount,
+      };
+    }
+    if (activeStatus === 'failed' || failedCount > 0) {
+      return {
+        status: 'failed',
+        badgeCount: failedCount,
+        runningCount,
+        waitingApprovalCount,
+        failedCount,
+      };
+    }
+    if (activeStatus === 'completed') {
+      return {
+        status: 'completed',
+        badgeCount: 0,
+        runningCount,
+        waitingApprovalCount,
+        failedCount,
+      };
+    }
+    return {
+      status: 'idle',
+      badgeCount: 0,
+      runningCount,
+      waitingApprovalCount,
+      failedCount,
+    };
   }
 
   async send(

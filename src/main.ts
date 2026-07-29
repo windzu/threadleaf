@@ -79,6 +79,18 @@ export default class ThreadleafPlugin extends Plugin {
     this.floatingButton = new FloatingAgentButton(this.app, () => {
       void this.openAgent();
     });
+    const updateFloatingActivity = (): void => {
+      const activeConversationId = this.router?.getRoute().activeConversationId ?? null;
+      const activity = this.runtimeCoordinator?.getActivitySummary(
+        activeConversationId,
+      );
+      if (activity) {
+        this.floatingButton?.setActivity(activity);
+      }
+    };
+    this.register(this.router.onChange(updateFloatingActivity));
+    this.register(this.runtimeCoordinator.onChange(updateFloatingActivity));
+    updateFloatingActivity();
     this.app.workspace.onLayoutReady(() => {
       this.floatingButton?.mount();
     });
