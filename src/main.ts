@@ -12,6 +12,8 @@ import {
 } from './page-context/PageAgentIndex';
 import { PageContextResolver } from './page-context/PageContextResolver';
 import { PageConversationRouter } from './page-context/PageConversationRouter';
+import { CodexAppServerGateway } from './providers/codex/runtime/CodexAppServerGateway';
+import { CodexChatRuntime } from './providers/codex/runtime/CodexChatRuntime';
 import { RuntimeCoordinator } from './runtime/RuntimeCoordinator';
 import { JsonFileStore } from './storage/JsonFileStore';
 import { FloatingAgentButton } from './ui/FloatingAgentButton';
@@ -24,6 +26,7 @@ export default class ThreadleafPlugin extends Plugin {
   private router: PageConversationRouter | null = null;
   private conversations: ConversationRepository | null = null;
   private runtimeCoordinator: RuntimeCoordinator | null = null;
+  private codexGateway: CodexAppServerGateway | null = null;
   private threadleafSettings: ThreadleafSettings | null = null;
 
   async onload(): Promise<void> {
@@ -34,9 +37,11 @@ export default class ThreadleafPlugin extends Plugin {
       this.threadleafSettings,
       this.manifest,
     );
+    this.codexGateway = new CodexAppServerGateway(providerHost);
     this.runtimeCoordinator = new RuntimeCoordinator(
       providerHost,
       this.conversations,
+      host => new CodexChatRuntime(host, this.requireCodexGateway()),
     );
 
     const pageIndexStore = new JsonFileStore<PageAgentIndexDocument>(
@@ -64,7 +69,10 @@ export default class ThreadleafPlugin extends Plugin {
     this.router.start();
     this.register(() => this.pageContext?.stop());
     this.register(() => this.router?.stop());
-    this.register(() => this.runtimeCoordinator?.cleanup());
+    this.register(() => {
+      this.runtimeCoordinator?.cleanup();
+      void this.codexGateway?.cleanup();
+    });
     this.registerEvent(
       this.app.vault.on('rename', (file, oldPath) => {
         if (!this.pageIndex || !this.router) {
@@ -154,5 +162,12 @@ export default class ThreadleafPlugin extends Plugin {
       throw new Error('Threadleaf settings are not initialized.');
     }
     return this.threadleafSettings;
+  }
+
+  private requireCodexGateway(): CodexAppServerGateway {
+    if (!this.codexGateway) {
+      throw new Error('Threadleaf Codex gateway is not initialized.');
+    }
+    return this.codexGateway;
   }
 }

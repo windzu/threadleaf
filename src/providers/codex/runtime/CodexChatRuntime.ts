@@ -48,11 +48,9 @@ import {
   findPreferredCodexSkillByName,
 } from '../skills/CodexSkillListingService';
 import { type CodexProviderState, getCodexState } from '../types';
-import { CodexAppServerProcess } from './CodexAppServerProcess';
 import {
-  initializeCodexAppServerTransport,
-  resolveCodexAppServerLaunchSpec,
-} from './codexAppServerSupport';
+  CodexAppServerGateway,
+} from './CodexAppServerGateway';
 import type {
   SandboxPolicy,
   ServerRequestResolvedNotification,
@@ -71,8 +69,7 @@ import type {
 import { CodexDynamicToolRegistry } from './CodexDynamicToolRegistry';
 import type { CodexLaunchSpec } from './codexLaunchTypes';
 import { CodexNotificationRouter } from './CodexNotificationRouter';
-import { CodexRpcTransport } from './CodexRpcTransport';
-import { type CodexRuntimeContext, createCodexRuntimeContext } from './CodexRuntimeContext';
+import type { CodexRuntimeContext } from './CodexRuntimeContext';
 import { CodexServerRequestRouter } from './CodexServerRequestRouter';
 import { CodexSessionManager } from './CodexSessionManager';
 import {
@@ -129,8 +126,7 @@ export class CodexChatRuntime implements ChatRuntime {
 
   private plugin: ProviderHost;
   private session = new CodexSessionManager();
-  private process: CodexAppServerProcess | null = null;
-  private transport: CodexRpcTransport | null = null;
+  private transport: CodexAppServerGateway | null = null;
   private launchSpec: CodexLaunchSpec | null = null;
   private runtimeContext: CodexRuntimeContext | null = null;
   private notificationRouter: CodexNotificationRouter | null = null;
@@ -141,10 +137,12 @@ export class CodexChatRuntime implements ChatRuntime {
   private disposed = false;
   private lifecycleGeneration = 0;
   private readyListeners = new Set<(ready: boolean) => void>();
-  private clientConfigKey: string | null = null;
+  private gatewaySubscriptions: Array<() => void> = [];
+  private gatewayGeneration = 0;
   private currentTurnId: string | null = null;
   private currentQueryThreadId: string | null = null;
   private loadedThreadId: string | null = null;
+  private loadedPromptKey: string | null = null;
   private currentThreadPath: string | null = null;
   private workspaceDependencyToolVersion: number | null = null;
   private legacyWorkspaceDependencyNoticeKeys = new Set<string>();
@@ -171,7 +169,10 @@ export class CodexChatRuntime implements ChatRuntime {
   private canceled = false;
   private turnMetadata: ChatTurnMetadata = {};
 
-  constructor(plugin: ProviderHost) {
+  constructor(
+    plugin: ProviderHost,
+    private readonly gateway: CodexAppServerGateway,
+  ) {
     this.plugin = plugin;
   }
 
@@ -272,41 +273,28 @@ export class CodexChatRuntime implements ChatRuntime {
     generation: number,
   ): Promise<boolean> {
     this.assertLifecycleCurrent(generation);
-    const promptSettings = this.getSystemPromptSettings();
-    const promptKey = computeSystemPromptKey(promptSettings);
-    const launchSpec = await resolveCodexAppServerLaunchSpec(
-      this.plugin,
-      this.providerId,
-      options?.providerTransitionOwner === true
-        ? { providerTransitionOwner: true }
-        : undefined,
-    );
-    const clientConfigKey = [promptKey, JSON.stringify({
-      command: launchSpec.command,
-      args: launchSpec.args,
-      spawnCwd: launchSpec.spawnCwd,
-      targetCwd: launchSpec.targetCwd,
-      target: launchSpec.target,
-    })].join('::');
-    const shouldRebuild = !this.process
-      || !this.transport
-      || !this.process.isAlive()
-      || options?.force === true
-      || this.clientConfigKey !== clientConfigKey;
-
-    if (shouldRebuild) {
-      await this.shutdownProcess();
-      this.assertLifecycleCurrent(generation);
-      await this.startAppServer(launchSpec, clientConfigKey);
-      if (!this.isLifecycleCurrent(generation)) {
-        await this.shutdownProcess();
-        this.assertLifecycleCurrent(generation);
-      }
-    }
-
+    const readyState = await this.gateway.ensureReady(options);
     this.assertLifecycleCurrent(generation);
+    const promptKey = computeSystemPromptKey(this.getSystemPromptSettings());
+    if (
+      readyState.generation !== this.gatewayGeneration
+      || promptKey !== this.loadedPromptKey
+    ) {
+      this.loadedThreadId = null;
+      this.gatewayGeneration = readyState.generation;
+      this.loadedPromptKey = promptKey;
+    }
+    this.transport = this.gateway;
+    this.launchSpec = readyState.launchSpec;
+    this.runtimeContext = readyState.runtimeContext;
+    this.dynamicToolRegistry = new CodexDynamicToolRegistry();
+    const workspaceDependencyTool = createCodexWorkspaceDependencyTool(
+      this.runtimeContext,
+    );
+    this.dynamicToolRegistry.register(workspaceDependencyTool);
+    this.serverRequestRouter.setDynamicToolRegistry(this.dynamicToolRegistry);
     this.setReady(true);
-    return shouldRebuild;
+    return readyState.restarted;
   }
 
   async *query(
@@ -609,6 +597,7 @@ export class CodexChatRuntime implements ChatRuntime {
       return;
     } finally {
       this.notificationRouter?.endTurn();
+      this.clearGatewaySubscriptions();
 
       this.cleanupActiveInputBundles();
       this.currentTurnId = null;
@@ -836,13 +825,14 @@ export class CodexChatRuntime implements ChatRuntime {
     this.loadedThreadId = null;
     this.currentThreadPath = null;
     this.workspaceDependencyToolVersion = null;
+    this.loadedPromptKey = null;
     this.legacyWorkspaceDependencyNoticeKeys.clear();
     this.currentTurnId = null;
     this.currentQueryThreadId = null;
     this.pendingTurnNotifications = [];
     this.pendingFork = null;
-    this.clientConfigKey = null;
-    this.shutdownProcess().catch(() => {});
+    this.gatewayGeneration = 0;
+    this.disconnectGateway();
     this.setReady(false);
   }
 
@@ -943,23 +933,6 @@ export class CodexChatRuntime implements ChatRuntime {
     );
   }
 
-  private async startAppServer(launchSpec: CodexLaunchSpec, clientConfigKey: string): Promise<void> {
-    this.launchSpec = launchSpec;
-    this.process = new CodexAppServerProcess(launchSpec);
-    this.process.start();
-
-    this.transport = new CodexRpcTransport(this.process);
-    this.transport.start();
-
-    const initializeResult = await initializeCodexAppServerTransport(this.transport);
-    this.runtimeContext = createCodexRuntimeContext(launchSpec, initializeResult);
-    this.dynamicToolRegistry = new CodexDynamicToolRegistry();
-    const workspaceDependencyTool = createCodexWorkspaceDependencyTool(this.runtimeContext);
-    this.dynamicToolRegistry.register(workspaceDependencyTool);
-    this.serverRequestRouter.setDynamicToolRegistry(this.dynamicToolRegistry);
-    this.clientConfigKey = clientConfigKey;
-  }
-
   private async startThread(
     model: string | undefined,
     providerSettings: Record<string, unknown>,
@@ -990,6 +963,7 @@ export class CodexChatRuntime implements ChatRuntime {
   private wireTransportHandlers(): void {
     if (!this.transport || !this.notificationRouter) return;
 
+    this.clearGatewaySubscriptions();
     const router = this.notificationRouter;
     const methods = [
       'item/agentMessage/delta',
@@ -1015,7 +989,7 @@ export class CodexChatRuntime implements ChatRuntime {
     ];
 
     for (const method of methods) {
-      this.transport.onNotification(method, (params) => {
+      this.gatewaySubscriptions.push(this.gateway.onNotification(method, (params) => {
         if (method === 'serverRequest/resolved') {
           this.handleServerRequestResolved(params as ServerRequestResolvedNotification);
           return;
@@ -1024,7 +998,7 @@ export class CodexChatRuntime implements ChatRuntime {
           return;
         }
         router.handleNotification(method, params);
-      });
+      }));
     }
 
     // Server requests (approvals, ask-user, client-hosted dynamic tools)
@@ -1037,21 +1011,44 @@ export class CodexChatRuntime implements ChatRuntime {
     ];
 
     for (const method of requestMethods) {
-      this.transport.onServerRequest(method, (requestId, params) => {
-        return this.serverRequestRouter.handleServerRequest(requestId, method, params);
-      });
+      this.gatewaySubscriptions.push(
+        this.gateway.onServerRequest(
+          method,
+          params => this.ownsServerRequest(params),
+          (requestId, params) => {
+            return this.serverRequestRouter.handleServerRequest(
+              requestId,
+              method,
+              params,
+            );
+          },
+        ),
+      );
     }
   }
 
-  private async shutdownProcess(): Promise<void> {
-    if (this.transport) {
-      this.transport.dispose();
-      this.transport = null;
+  private ownsServerRequest(params: unknown): boolean {
+    if (!params || typeof params !== 'object') {
+      return false;
     }
-    if (this.process) {
-      await this.process.shutdown();
-      this.process = null;
+    const threadId = (params as Record<string, unknown>).threadId;
+    return typeof threadId === 'string'
+      && (
+        threadId === this.currentQueryThreadId
+        || threadId === this.session.getThreadId()
+      );
+  }
+
+  private clearGatewaySubscriptions(): void {
+    for (const unsubscribe of this.gatewaySubscriptions) {
+      unsubscribe();
     }
+    this.gatewaySubscriptions = [];
+  }
+
+  private disconnectGateway(): void {
+    this.clearGatewaySubscriptions();
+    this.transport = null;
     this.launchSpec = null;
     this.runtimeContext = null;
     this.dynamicToolRegistry = new CodexDynamicToolRegistry();
