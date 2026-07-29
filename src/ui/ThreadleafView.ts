@@ -38,8 +38,14 @@ export class ThreadleafView extends ItemView {
     return 'logo-crystal';
   }
 
+  focusComposer(): void {
+    this.contentEl
+      .querySelector<HTMLTextAreaElement>('.threadleaf-view__input')
+      ?.focus();
+  }
+
   async onOpen(): Promise<void> {
-    void this.renderRoute(this.router.getRoute());
+    await this.renderRoute(this.router.getRoute());
     this.register(this.router.onChange(route => {
       if (this.draftPagePath && this.draftPagePath !== route.page?.path) {
         this.draftPagePath = null;
@@ -100,9 +106,12 @@ export class ThreadleafView extends ItemView {
       return;
     }
 
-    const conversationBar = this.contentEl.createDiv('threadleaf-view__conversation-bar');
     if (route.conversationIds.length > 0) {
-      const isDraft = this.draftPagePath === page.path;
+      const conversationBar = this.contentEl.createDiv(
+        'threadleaf-view__conversation-bar',
+      );
+      const isDraft = this.draftPagePath === page.path
+        || !snapshot?.conversation;
       const selector = conversationBar.createEl('select', {
         cls: 'dropdown threadleaf-view__conversation-select',
       });
@@ -128,15 +137,17 @@ export class ThreadleafView extends ItemView {
         this.draftPagePath = null;
         void this.router.selectConversation(selector.value);
       });
-    }
 
-    const newButton = conversationBar.createEl('button', {
-      cls: 'threadleaf-view__new-conversation',
-      text: 'New',
-    });
-    newButton.addEventListener('click', () => {
-      this.startDraft();
-    });
+      if (!isDraft) {
+        const newButton = conversationBar.createEl('button', {
+          cls: 'threadleaf-view__new-conversation',
+          text: 'New',
+        });
+        newButton.addEventListener('click', () => {
+          this.startDraft();
+        });
+      }
+    }
 
     const messages = this.contentEl.createDiv('threadleaf-view__messages');
     if (!snapshot?.conversation) {

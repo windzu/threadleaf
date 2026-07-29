@@ -143,6 +143,9 @@ export default class ThreadleafPlugin extends Plugin {
     });
     this.app.workspace.revealLeaf(leaf);
     this.floatingButton?.setVisible(false);
+    if (leaf.view instanceof ThreadleafView) {
+      leaf.view.focusComposer();
+    }
   }
 
   private requireRouter(): PageConversationRouter {
