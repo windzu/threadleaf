@@ -1,0 +1,10 @@
+{
+  "id": "threadleaf",
+  "name": "Threadleaf",
+  "version": "0.1.0",
+  "minAppVersion": "1.7.2",
+  "description": "A page-native agent that follows your active Obsidian page.",
+  "author": "windzu",
+  "authorUrl": "https://github.com/windzu",
+  "isDesktopOnly": true
+}

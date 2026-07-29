@@ -113,25 +113,20 @@ Respect workspace leaves, sidebars, themes, keyboard navigation, file renames, s
 - Reimplementing provider-native agent runtimes.
 - Supporting unlimited simultaneously active runtimes.
 
-## Recommended implementation direction
+## Implementation direction
 
-The recommended path is to fork Claudian and preserve its:
+Threadleaf is a new Obsidian plugin, not a Claudian fork or wrapper. The
+initial codebase copies and adapts a fixed snapshot of:
 
 - provider-neutral runtime contracts;
-- Claude and Codex provider adapters;
-- streaming and approval flows;
-- tool, diff, and message rendering;
-- conversation persistence;
-- mentions and inline editing.
+- the Codex provider adapter;
+- streaming and approval protocols;
+- the supporting conversation and tool-call types.
 
-Threadleaf should replace or substantially redesign:
-
-- `TabManager`;
-- the tab bar;
-- active-conversation restoration;
-- current-note ownership semantics;
-- chat-view lifecycle;
-- background runtime coordination.
+It deliberately excludes Claudian's plugin shell, tabs, views, settings UI,
+storage implementation, and conversation UI. Threadleaf owns its page-native
+interaction model, storage schema, lifecycle, and user interface from the
+start.
 
 The replacement interaction layer should introduce:
 
@@ -148,7 +143,7 @@ The first usable release should support:
 
 - macOS desktop;
 - one Obsidian vault;
-- Markdown pages;
+- Markdown and Bases pages;
 - one main window;
 - a floating bottom-right entry point;
 - a native right-sidebar Agent view;

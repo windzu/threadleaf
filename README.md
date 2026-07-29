@@ -60,17 +60,23 @@ Threadleaf should reduce the interaction cost of using an agent to one natural a
 
 ## Technical direction
 
-Threadleaf intends to reuse the provider runtimes, tool rendering, approvals, conversation persistence, mentions, and inline-edit capabilities proven by [Claudian](https://github.com/YishenTu/claudian), while replacing its tab-centric chat shell with a page conversation router and page-agent index.
+Threadleaf is an independent plugin. Its first implementation imports a
+selected snapshot of Claudian's provider-neutral runtime contracts and Codex
+adapter, then reorganizes that code behind Threadleaf's page-native
+architecture.
 
-The initial implementation is expected to be a fork-based exploration rather than a thin wrapper around the released Claudian plugin.
+It does not use Claudian as a dependency, preserve Claudian's application
+structure, or read Claudian settings and sessions. The exact source boundary
+is documented in [Upstream Source Boundary](docs/UPSTREAM.md).
 
 See [Project Vision](docs/VISION.md) for the product boundary and architectural direction. A Chinese version is available at [项目愿景](docs/VISION.zh-CN.md).
 
 ## Status
 
-Design and prototyping.
+Foundation implementation.
 
-The first milestone will focus on macOS desktop, a single Obsidian vault, Markdown pages, and Codex/Claude-backed conversations.
+The first milestone focuses on macOS desktop, a single Obsidian vault,
+Markdown and Bases pages, and Codex-backed conversations.
 
 ## Naming
 
@@ -83,6 +89,6 @@ Chinese name: **页脉**.
 
 ## License
 
-License selection is pending.
-
-Future use of Claudian source code will preserve its MIT license and required copyright notice.
+Threadleaf is licensed under the MIT License. Selected code derived from
+Claudian retains its required MIT notice in
+[Third-party notices](THIRD_PARTY_NOTICES.md).

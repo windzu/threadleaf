@@ -118,25 +118,19 @@ Threadleaf 的目标是把这种「页面原生」的 Agent 体验带到 Obsidia
 - 重新实现 Provider 原生 Runtime。
 - 保持无限数量的同时活跃 Runtime。
 
-## 推荐技术路线
+## 技术路线
 
-第一阶段 fork Claudian，并保留：
+Threadleaf 是一个全新的 Obsidian 插件，不是 Claudian 的 Fork 或封装。
+初始代码只从一个固定版本中复制并改造：
 
-- Provider-neutral Runtime；
-- Claude 和 Codex Provider；
-- 流式输出与审批；
-- Tool、Diff 和消息渲染；
-- Conversation 持久化；
-- `@` 引用和 Inline Edit。
+- Provider-neutral Runtime Contract；
+- Codex Provider Adapter；
+- 流式输出与审批协议；
+- 所需的 Conversation 和 Tool Call 类型。
 
-重点替换或重构：
-
-- `TabManager`；
-- 聊天 Tab Bar；
-- Active Conversation 恢复；
-- `currentNote` 的语义；
-- Chat View 生命周期；
-- 后台 Runtime 管理。
+明确不引入 Claudian 的插件外壳、Tab、View、设置 UI、存储实现和会话
+UI。Threadleaf 从一开始就拥有独立的页面原生交互、存储 Schema、生命周期
+和界面。
 
 新增的交互层应包含：
 
@@ -151,7 +145,7 @@ Threadleaf 的目标是把这种「页面原生」的 Agent 体验带到 Obsidia
 
 - macOS Desktop；
 - 单个 Obsidian Vault；
-- Markdown 页面；
+- Markdown 和 Bases 页面；
 - 单主窗口；
 - 页面右下角悬浮入口；
 - 原生右侧 Agent View；

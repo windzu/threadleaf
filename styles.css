@@ -1,0 +1,47 @@
+.threadleaf-floating-button {
+  align-items: center;
+  background: var(--interactive-accent);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 999px;
+  bottom: 28px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 24%);
+  color: var(--text-on-accent);
+  cursor: pointer;
+  display: flex;
+  height: 48px;
+  justify-content: center;
+  padding: 0;
+  position: absolute;
+  right: 28px;
+  transition:
+    box-shadow 120ms ease,
+    transform 120ms ease;
+  width: 48px;
+  z-index: var(--layer-popover);
+}
+
+.threadleaf-floating-button:hover {
+  box-shadow: 0 10px 30px rgb(0 0 0 / 32%);
+  transform: translateY(-1px);
+}
+
+.threadleaf-floating-button svg {
+  height: 27px;
+  width: 27px;
+}
+
+.threadleaf-view {
+  padding: var(--size-4-4);
+}
+
+.threadleaf-view__eyebrow {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.08em;
+}
+
+.threadleaf-view__context {
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
