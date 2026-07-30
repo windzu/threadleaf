@@ -1,3 +1,5 @@
+import { setIcon, setTooltip } from 'obsidian';
+
 import type { ConversationModelService } from '../models/types';
 import type {
   PageReference,
@@ -40,21 +42,38 @@ export function renderWindyComposer(
     onSubmit: options.onSubmit,
   });
   const actions = composer.createDiv('windy-view__composer-actions');
-  referenceComposer.createAddButton(actions);
-  actions.createDiv({
-    cls: `windy-view__status windy-view__status--${options.status}`,
-    text: statusLabel(options.status),
-  });
-  renderModelPickerControl(actions, {
+  const leftActions = actions.createDiv('windy-view__composer-actions-left');
+  referenceComposer.createAddButton(leftActions);
+  if (options.status !== 'idle') {
+    const status = leftActions.createDiv({
+      cls: `windy-view__status windy-view__status--${options.status}`,
+    });
+    status.createSpan('windy-view__status-dot');
+    status.createSpan({ text: statusLabel(options.status) });
+  }
+  const rightActions = actions.createDiv('windy-view__composer-actions-right');
+  renderModelPickerControl(rightActions, {
     selectedModel: options.selectedModel,
     disabled: isRunning,
     models: options.models,
     onSelect: options.onModelSelect,
   });
-  const sendButton = actions.createEl('button', {
-    cls: 'mod-cta',
-    text: isRunning ? 'Stop' : 'Send',
+  const sendButton = rightActions.createEl('button', {
+    cls: `windy-view__send-button clickable-icon${
+      isRunning ? ' is-running' : ''
+    }`,
+    attr: {
+      type: 'button',
+      'aria-label': isRunning ? 'Stop response' : 'Send message',
+    },
   });
+  setIcon(sendButton, isRunning ? 'square' : 'arrow-up');
+  setTooltip(sendButton, isRunning ? 'Stop response' : 'Send message');
+  const updateSendState = (): void => {
+    sendButton.disabled = !isRunning && !referenceComposer.input.value.trim();
+  };
+  updateSendState();
+  referenceComposer.input.addEventListener('input', updateSendState);
   sendButton.addEventListener('click', () => {
     if (isRunning) {
       options.onStop();

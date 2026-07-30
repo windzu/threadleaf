@@ -40,7 +40,7 @@ export function renderPageReferenceComposer(
   const input = container.createEl('textarea', {
     cls: 'windy-view__input',
     attr: {
-      placeholder: `Ask about ${options.primaryPage.basename}…`,
+      placeholder: 'Ask to edit, explain, or organize this page…',
       rows: '3',
     },
   });

@@ -2,6 +2,7 @@ import {
   Menu,
   Notice,
   setIcon,
+  setTooltip,
   type MenuItem,
 } from 'obsidian';
 
@@ -66,13 +67,16 @@ export function renderConversationHistoryControl(
     }
     menu.showAtMouseEvent(event);
   });
-  conversationBar.createSpan({
-    cls: 'windy-view__conversation-count',
-    text: String(options.history.length),
+  const newConversation = conversationBar.createEl('button', {
+    cls: 'windy-view__new-conversation clickable-icon',
     attr: {
-      'aria-label': `${options.history.length} saved conversations`,
+      type: 'button',
+      'aria-label': 'Start a new conversation',
     },
   });
+  setIcon(newConversation, 'message-circle-plus');
+  setTooltip(newConversation, 'New conversation');
+  newConversation.addEventListener('click', options.onStartDraft);
 }
 
 function configureConversationItem(

@@ -16,6 +16,7 @@ import {
   toolStatusIcon,
   toolStatusLabel,
 } from './messageFormatting';
+import { WINDY_NAV_ICON } from './icons';
 
 export class MessageListRenderer extends Component {
   constructor(private readonly app: App) {
@@ -33,11 +34,21 @@ export class MessageListRenderer extends Component {
       const messageElement = container.createDiv({
         cls: `windy-message windy-message--${message.role}`,
       });
-      messageElement.createDiv({
-        cls: 'windy-message__role',
+      const role = messageElement.createDiv('windy-message__role');
+      const roleIcon = role.createSpan('windy-message__role-icon');
+      setIcon(roleIcon, message.role === 'user' ? 'user-round' : WINDY_NAV_ICON);
+      role.createSpan({
         text: message.role === 'user' ? 'You' : 'Windy',
       });
       this.renderReferences(messageElement, message);
+      if (message.role === 'assistant') {
+        const activity = messageElement.createDiv('windy-message__activity');
+        this.renderThinking(activity, message);
+        this.renderTools(activity, message.toolCalls ?? []);
+        if (activity.childElementCount === 0) {
+          activity.remove();
+        }
+      }
       const contentElement = messageElement.createDiv(
         'windy-message__content',
       );
@@ -61,8 +72,10 @@ export class MessageListRenderer extends Component {
         contentElement.addClass('windy-message__content--plain');
         contentElement.setText(content);
       }
-      this.renderThinking(messageElement, message);
-      this.renderTools(messageElement, message.toolCalls ?? []);
+      if (message.role !== 'assistant') {
+        this.renderThinking(messageElement, message);
+        this.renderTools(messageElement, message.toolCalls ?? []);
+      }
     }
     await Promise.all(markdownRenders);
   }

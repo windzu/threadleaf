@@ -58,6 +58,17 @@ Windy should reduce the interaction cost of using an agent to one natural action
 5. Use `@` to add other notes without changing the primary page.
 6. Return later and continue from where that page's work stopped.
 
+## Interface
+
+Windy's interface uses a calm page-first shell, keeps execution detail
+available without dominating the transcript, and adapts to Obsidian's light
+and dark themes.
+
+![Windy page-scoped conversation](docs/screenshots/windy-sidebar-after.png)
+
+The interaction hierarchy, visual tokens, responsive requirements, and state
+model are documented in [UI design](docs/UI_DESIGN.md).
+
 ## Technical direction
 
 Windy is an independent plugin. Its first implementation imports a
