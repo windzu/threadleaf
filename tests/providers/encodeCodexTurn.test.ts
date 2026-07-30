@@ -17,7 +17,22 @@ describe('encodeCodexTurn', () => {
       turn.prompt,
       /<context_files>\nB\.md, Folder\/C\.base\n<\/context_files>/,
     );
-    assert.equal(turn.prompt.match(/B\.md/g)?.length, 1);
+    assert.match(
+      turn.prompt,
+      /Use these explicitly attached pages as context for this request:\n@B\.md\n@Folder\/C\.base/,
+    );
+    assert.equal(turn.prompt.match(/@B\.md/g)?.length, 1);
+  });
+
+  it('does not duplicate page mentions already written by the user', () => {
+    const turn = encodeCodexTurn({
+      text: 'Compare @B.md with the current page',
+      primaryPagePath: 'A.md',
+      referencedPagePaths: ['B.md'],
+    });
+
+    assert.equal(turn.prompt.match(/@B\.md/g)?.length, 1);
+    assert.match(turn.prompt, /<context_files>\nB\.md\n<\/context_files>/);
   });
 
   it('keeps compact commands free of injected page context', () => {

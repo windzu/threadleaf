@@ -8,6 +8,24 @@ function isCompactCommand(text: string): boolean {
   return /^\/compact(\s|$)/i.test(text);
 }
 
+function appendAttachedPageMentions(
+  prompt: string,
+  pagePaths: string[],
+): string {
+  const missingMentions = pagePaths.filter(
+    path => !prompt.includes(`@${path}`),
+  );
+  if (missingMentions.length === 0) {
+    return prompt;
+  }
+  return [
+    prompt,
+    '',
+    'Use these explicitly attached pages as context for this request:',
+    ...missingMentions.map(path => `@${path}`),
+  ].join('\n');
+}
+
 export function encodeCodexTurn(request: ChatTurnRequest): PreparedChatTurn {
   const isCompact = isCompactCommand(request.text);
 
@@ -21,11 +39,15 @@ export function encodeCodexTurn(request: ChatTurnRequest): PreparedChatTurn {
     };
   }
 
-  let pageContextPrompt = request.primaryPagePath
-    ? appendCurrentNote(request.text, request.primaryPagePath)
-    : request.text;
   const referencedPagePaths = [...new Set(request.referencedPagePaths ?? [])]
     .filter(path => path && path !== request.primaryPagePath);
+  const promptWithMentions = appendAttachedPageMentions(
+    request.text,
+    referencedPagePaths,
+  );
+  let pageContextPrompt = request.primaryPagePath
+    ? appendCurrentNote(promptWithMentions, request.primaryPagePath)
+    : promptWithMentions;
   if (referencedPagePaths.length > 0) {
     pageContextPrompt = appendContextFiles(
       pageContextPrompt,
