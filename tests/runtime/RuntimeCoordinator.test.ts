@@ -325,4 +325,38 @@ describe('RuntimeCoordinator', () => {
     await task;
     assert.equal(conversations.get('a')?.activeTurn?.status, 'interrupted');
   });
+
+  it('deduplicates concurrent initialization for the same conversation', async () => {
+    const conversations = new Map([['a', conversation('a')]]);
+    const gate = deferred();
+    let loadCount = 0;
+    let runtimeCount = 0;
+    const store: ConversationStore = {
+      async load(conversationId: string): Promise<Conversation | null> {
+        loadCount += 1;
+        await gate.promise;
+        const loaded = conversations.get(conversationId);
+        return loaded ? structuredClone(loaded) : null;
+      },
+      async save(saved: Conversation): Promise<void> {
+        conversations.set(saved.id, structuredClone(saved));
+      },
+    };
+    const coordinator = new RuntimeCoordinator(host, store, () => {
+      runtimeCount += 1;
+      return createFakeRuntime({});
+    });
+
+    const snapshots = Promise.all([
+      coordinator.getSnapshot('a'),
+      coordinator.getSnapshot('a'),
+    ]);
+    gate.resolve();
+    const [first, second] = await snapshots;
+
+    assert.equal(first.conversation?.id, 'a');
+    assert.equal(second.conversation?.id, 'a');
+    assert.equal(loadCount, 1);
+    assert.equal(runtimeCount, 1);
+  });
 });
