@@ -70,6 +70,9 @@ runtime accepts only notifications matching its current `threadId` and
   status, and timestamps. On plugin restart, `running` and `waiting-approval`
   states become `interrupted`; partial assistant output remains visible and the
   lost live turn is never presented as still running.
+- An explicit model selection belongs to the conversation. An absent
+  `selectedModel` means `Auto` and resolves through the current Threadleaf
+  default when a turn starts.
 
 ## Current boundaries
 
@@ -78,6 +81,9 @@ runtime accepts only notifications matching its current `threadId` and
   lazy first-send creation, and conversation selection.
 - `src/conversations`: persisted conversation content and provider session
   metadata.
+- `src/models`: provider-neutral model-selection contracts consumed by UI.
+- `src/providers/codex/CodexConversationModelService`: live Codex model
+  discovery, validation, and conversation-level selection.
 - `src/runtime/RuntimeCoordinator`: task registry, event forwarding, and global
   background status.
 - `src/runtime/ConversationTaskController`: one conversation's live task

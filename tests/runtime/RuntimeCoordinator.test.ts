@@ -359,4 +359,46 @@ describe('RuntimeCoordinator', () => {
     assert.equal(loadCount, 1);
     assert.equal(runtimeCount, 1);
   });
+
+  it('persists conversation model selection and clears it for Auto', async () => {
+    const conversations = new Map([['a', conversation('a')]]);
+    const coordinator = new RuntimeCoordinator(
+      host,
+      new MemoryConversationStore(conversations),
+      () => createFakeRuntime({}),
+    );
+
+    await coordinator.setModel('a', 'gpt-5.6-terra');
+    assert.equal(
+      (await coordinator.getSnapshot('a')).conversation?.selectedModel,
+      'gpt-5.6-terra',
+    );
+
+    await coordinator.setModel('a', undefined);
+    assert.equal(
+      (await coordinator.getSnapshot('a')).conversation?.selectedModel,
+      undefined,
+    );
+  });
+
+  it('names a new conversation from its first request', async () => {
+    const conversations = new Map([['a', conversation('a')]]);
+    conversations.get('a')!.title = 'New conversation';
+    const coordinator = new RuntimeCoordinator(
+      host,
+      new MemoryConversationStore(conversations),
+      () => createFakeRuntime({}),
+    );
+
+    await coordinator.send(
+      'a',
+      '  Explain\n the page conversation architecture  ',
+      'A.md',
+    );
+
+    assert.equal(
+      (await coordinator.getSnapshot('a')).conversation?.title,
+      'Explain the page conversation architecture',
+    );
+  });
 });

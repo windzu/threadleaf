@@ -123,6 +123,13 @@ export class RuntimeCoordinator {
     this.tasks.get(conversationId)?.cancel();
   }
 
+  async setModel(
+    conversationId: string,
+    model: string | undefined,
+  ): Promise<void> {
+    await (await this.ensureTask(conversationId)).setModel(model);
+  }
+
   cleanup(): void {
     this.shuttingDown = true;
     for (const task of this.tasks.values()) {

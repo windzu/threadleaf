@@ -6,16 +6,19 @@ import type {
   PageConversationRouter,
 } from '../page-context/PageConversationRouter';
 import type { PageConversationService } from '../page-context/PageConversationService';
+import type { ConversationModelService } from '../models/types';
 import type {
   ConversationRuntimeSnapshot,
   RuntimeCoordinator,
 } from '../runtime/RuntimeCoordinator';
 import { renderConversationHistoryControl } from './ConversationHistoryControl';
+import { renderModelPickerControl } from './ModelPickerControl';
 
 export const VIEW_TYPE_THREADLEAF = 'threadleaf-agent-view';
 
 export class ThreadleafView extends ItemView {
   private draftPagePath: string | null = null;
+  private draftSelectedModel: string | undefined;
   private history: ConversationMeta[] = [];
 
   constructor(
@@ -23,6 +26,7 @@ export class ThreadleafView extends ItemView {
     private readonly router: PageConversationRouter,
     private readonly pageConversations: PageConversationService,
     private readonly runtimeCoordinator: RuntimeCoordinator,
+    private readonly conversationModels: ConversationModelService,
   ) {
     super(leaf);
   }
@@ -50,6 +54,7 @@ export class ThreadleafView extends ItemView {
     this.register(this.router.onChange(route => {
       if (this.draftPagePath && this.draftPagePath !== route.page?.path) {
         this.draftPagePath = null;
+        this.draftSelectedModel = undefined;
       }
       void this.renderRoute(route);
     }));
@@ -204,6 +209,22 @@ export class ThreadleafView extends ItemView {
       text: this.statusLabel(status),
     });
     const isRunning = status === 'running' || status === 'waiting-approval';
+    const isDraft = !snapshot?.conversation;
+    renderModelPickerControl(actions, {
+      selectedModel: isDraft
+        ? this.draftSelectedModel
+        : snapshot.conversation?.selectedModel,
+      disabled: isRunning,
+      models: this.conversationModels,
+      onSelect: async model => {
+        if (!snapshot?.conversation) {
+          this.draftSelectedModel = model ?? undefined;
+          this.renderConversation(route, snapshot, history);
+          return;
+        }
+        await this.conversationModels.select(snapshot.conversation.id, model);
+      },
+    });
     const sendButton = actions.createEl('button', {
       cls: 'mod-cta',
       text: isRunning ? 'Stop' : 'Send',
@@ -296,6 +317,7 @@ export class ThreadleafView extends ItemView {
       return;
     }
     this.draftPagePath = route.page.path;
+    this.draftSelectedModel = undefined;
     this.renderConversation(route, null, this.history);
   }
 
@@ -309,10 +331,14 @@ export class ThreadleafView extends ItemView {
     try {
       const conversationId = this.draftPagePath === pagePath
         || !route.activeConversationId
-        ? await this.pageConversations.ensureConversationForPage(pagePath)
+        ? await this.pageConversations.ensureConversationForPage(
+          pagePath,
+          this.draftSelectedModel,
+        )
         : route.activeConversationId;
       if (this.draftPagePath === pagePath) {
         this.draftPagePath = null;
+        this.draftSelectedModel = undefined;
       }
       await this.runtimeCoordinator.send(
         conversationId,
