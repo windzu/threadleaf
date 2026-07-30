@@ -10,8 +10,12 @@ work.
 flowchart TB
     Plugin["Threadleaf plugin"] --> Gateway["CodexAppServerGateway"]
     Plugin --> Coordinator["RuntimeCoordinator"]
-    Coordinator --> RuntimeA["Conversation runtime A"]
-    Coordinator --> RuntimeB["Conversation runtime B"]
+    Coordinator --> TaskA["ConversationTaskController A"]
+    Coordinator --> TaskB["ConversationTaskController B"]
+    TaskA --> CheckpointA["TurnCheckpointManager A"]
+    TaskB --> CheckpointB["TurnCheckpointManager B"]
+    TaskA --> RuntimeA["Conversation runtime A"]
+    TaskB --> RuntimeB["Conversation runtime B"]
     RuntimeA --> Gateway
     RuntimeB --> Gateway
     Gateway --> Process["One Codex app-server process"]
@@ -26,6 +30,12 @@ configuration, and process generation.
 Each conversation owns a lightweight `CodexChatRuntime`. It retains
 conversation-specific thread, turn, prompt, approval, and stream state, but
 does not own a child process.
+
+`RuntimeCoordinator` is only the registry and aggregate activity boundary. A
+per-conversation `ConversationTaskController` owns send, cancel, approval, and
+recovery state. Its `TurnCheckpointManager` owns partial-output persistence and
+interruption checkpoints. Concurrent requests to initialize the same
+conversation share one controller and one runtime.
 
 The gateway broadcasts notifications to active conversation runtimes. Each
 runtime accepts only notifications matching its current `threadId` and
@@ -66,7 +76,12 @@ runtime accepts only notifications matching its current `threadId` and
 - `src/page-context`: active page detection and page-to-conversation routing.
 - `src/conversations`: persisted conversation content and provider session
   metadata.
-- `src/runtime`: provider-neutral task coordination and background status.
+- `src/runtime/RuntimeCoordinator`: task registry, event forwarding, and global
+  background status.
+- `src/runtime/ConversationTaskController`: one conversation's live task
+  lifecycle.
+- `src/runtime/TurnCheckpointManager`: partial turn persistence and interruption
+  recovery.
 - `src/providers/codex/runtime`: Codex protocol, shared process gateway, and
   per-conversation runtime state.
 - `src/ui`: Obsidian presentation and user interaction.
