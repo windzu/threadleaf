@@ -35,6 +35,32 @@ describe('encodeCodexTurn', () => {
     assert.match(turn.prompt, /<context_files>\nB\.md\n<\/context_files>/);
   });
 
+  it('preserves the roles of multiple inline page mentions', () => {
+    const text = (
+      'Use @Patterns/Structure.md as the template to revise '
+      + '@Drafts/Article.md'
+    );
+    const turn = encodeCodexTurn({
+      text,
+      primaryPagePath: 'Inbox.md',
+      referencedPagePaths: [
+        'Patterns/Structure.md',
+        'Drafts/Article.md',
+      ],
+    });
+
+    assert.match(turn.prompt, new RegExp(text.replaceAll('.', '\\.')));
+    assert.match(
+      turn.prompt,
+      /<context_files>\nPatterns\/Structure\.md, Drafts\/Article\.md\n<\/context_files>/,
+    );
+    assert.equal(
+      turn.prompt.match(/@Patterns\/Structure\.md/g)?.length,
+      1,
+    );
+    assert.equal(turn.prompt.match(/@Drafts\/Article\.md/g)?.length, 1);
+  });
+
   it('keeps compact commands free of injected page context', () => {
     const turn = encodeCodexTurn({
       text: '/compact',

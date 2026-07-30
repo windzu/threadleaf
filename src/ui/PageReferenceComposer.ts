@@ -4,25 +4,27 @@ import type {
   PageReference,
   PageReferenceService,
 } from '../page-context/PageReferenceService';
+import {
+  attachPageReference,
+  type ComposerPageReference,
+  insertInlinePageReference,
+  reconcileInlinePageReferences,
+  type TextRange,
+} from './pageReferenceMentions';
 
 export interface PageReferenceComposerOptions {
   primaryPage: PageReference;
   text: string;
-  references: PageReference[];
+  references: ComposerPageReference[];
   disabled: boolean;
   referenceService: PageReferenceService;
-  onChange: (text: string, references: PageReference[]) => void;
+  onChange: (text: string, references: ComposerPageReference[]) => void;
   onSubmit: (text: string) => void;
 }
 
 export interface PageReferenceComposerControl {
   input: HTMLTextAreaElement;
   createAddButton(container: HTMLElement): HTMLButtonElement;
-}
-
-interface MentionRange {
-  start: number;
-  end: number;
 }
 
 export function renderPageReferenceComposer(
@@ -32,7 +34,7 @@ export function renderPageReferenceComposer(
   let references = [...options.references];
   let results: PageReference[] = [];
   let activeResult = 0;
-  let mentionRange: MentionRange | null = null;
+  let mentionRange: TextRange | null = null;
   let popup: HTMLElement | null = null;
 
   const chips = container.createDiv('windy-composer__references');
@@ -48,6 +50,7 @@ export function renderPageReferenceComposer(
   input.disabled = options.disabled;
 
   input.addEventListener('input', () => {
+    references = reconcileInlinePageReferences(input.value, references);
     options.onChange(input.value, references);
     const match = findMention(input);
     if (!match) {
@@ -129,7 +132,7 @@ export function renderPageReferenceComposer(
       query,
       [
         options.primaryPage.path,
-        ...references.map(reference => reference.path),
+        ...references.map(reference => reference.page.path),
       ],
     );
     activeResult = 0;
@@ -170,16 +173,19 @@ export function renderPageReferenceComposer(
   }
 
   function selectReference(reference: PageReference): void {
-    if (!references.some(item => item.path === reference.path)) {
-      references = [...references, reference];
-    }
     if (mentionRange) {
-      input.value = (
-        input.value.slice(0, mentionRange.start)
-        + input.value.slice(mentionRange.end)
+      const selection = insertInlinePageReference(
+        input.value,
+        mentionRange,
+        reference,
+        references,
       );
-      input.selectionStart = mentionRange.start;
-      input.selectionEnd = mentionRange.start;
+      input.value = selection.text;
+      references = selection.references;
+      input.selectionStart = selection.caret;
+      input.selectionEnd = selection.caret;
+    } else {
+      references = attachPageReference(references, reference);
     }
     mentionRange = null;
     options.onChange(input.value, references);
@@ -192,7 +198,9 @@ export function renderPageReferenceComposer(
     chips.empty();
     renderChip(options.primaryPage, false);
     for (const reference of references) {
-      renderChip(reference, true);
+      if (reference.placement === 'attached') {
+        renderChip(reference.page, true);
+      }
     }
   }
 
@@ -217,7 +225,9 @@ export function renderPageReferenceComposer(
     });
     setIcon(remove, 'x');
     remove.addEventListener('click', () => {
-      references = references.filter(item => item.path !== reference.path);
+      references = references.filter(
+        item => item.page.path !== reference.path,
+      );
       options.onChange(input.value, references);
       renderChips();
       input.focus();

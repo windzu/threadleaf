@@ -30,12 +30,16 @@ import { EMPTY_STATE_ACTIONS } from './emptyStateActions';
 import { renderWindyComposer } from './WindyComposer';
 import { WINDY_NAV_ICON } from './icons';
 import { MessageListRenderer } from './MessageListRenderer';
+import {
+  type ComposerPageReference,
+  getReferencedPagePaths,
+} from './pageReferenceMentions';
 
 export const VIEW_TYPE_WINDY = 'windy-agent-view';
 
 interface ComposerDraft {
   text: string;
-  references: PageReference[];
+  references: ComposerPageReference[];
   selectedModel?: string;
 }
 
@@ -508,8 +512,8 @@ export class WindyView extends ItemView {
     }
     const pagePath = route.page.path;
     const composerDraft = this.getComposerDraft(pagePath);
-    const referencedPagePaths = composerDraft.references.map(
-      reference => reference.path,
+    const referencedPagePaths = getReferencedPagePaths(
+      composerDraft.references,
     );
     try {
       const conversationId = this.draftPagePath === pagePath
