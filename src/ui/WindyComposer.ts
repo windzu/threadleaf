@@ -31,6 +31,7 @@ export function renderWindyComposer(
   const isRunning = (
     options.status === 'running'
     || options.status === 'waiting-approval'
+    || options.status === 'waiting-input'
   );
   const referenceComposer = renderPageReferenceComposer(composer, {
     primaryPage: options.primaryPage,
@@ -89,6 +90,8 @@ function statusLabel(status: ConversationTaskStatus): string {
       return 'Running';
     case 'waiting-approval':
       return 'Needs approval';
+    case 'waiting-input':
+      return 'Needs input';
     case 'completed':
       return 'Completed';
     case 'failed':

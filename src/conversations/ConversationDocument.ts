@@ -28,6 +28,7 @@ function isValidActiveTurn(value: unknown): boolean {
     (
       value.status === 'running'
       || value.status === 'waiting-approval'
+      || value.status === 'waiting-input'
       || value.status === 'interrupted'
     )
     && typeof value.userMessageId === 'string'

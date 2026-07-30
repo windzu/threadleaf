@@ -8,6 +8,7 @@ const IDLE_ACTIVITY: RuntimeActivitySummary = {
   badgeCount: 0,
   runningCount: 0,
   waitingApprovalCount: 0,
+  waitingInputCount: 0,
   failedCount: 0,
   interruptedCount: 0,
 };
@@ -77,6 +78,7 @@ export class FloatingAgentButton {
       'idle',
       'running',
       'waiting-approval',
+      'waiting-input',
       'completed',
       'failed',
       'interrupted',
@@ -108,9 +110,18 @@ export class FloatingAgentButton {
   private getActivityLabel(): string {
     switch (this.activity.status) {
       case 'waiting-approval':
+        if (this.activity.waitingInputCount > 0) {
+          return `${this.activity.badgeCount} Windy task${
+            this.activity.badgeCount === 1 ? '' : 's'
+          } need attention`;
+        }
         return `${this.activity.waitingApprovalCount} Windy task${
           this.activity.waitingApprovalCount === 1 ? '' : 's'
         } need approval`;
+      case 'waiting-input':
+        return `${this.activity.waitingInputCount} Windy task${
+          this.activity.waitingInputCount === 1 ? '' : 's'
+        } need input`;
       case 'running':
         return `${this.activity.runningCount} Windy task${
           this.activity.runningCount === 1 ? '' : 's'

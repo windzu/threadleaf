@@ -33,7 +33,7 @@ export class TurnCheckpointManager {
 
   updateActiveStatus(
     conversation: Conversation,
-    status: 'running' | 'waiting-approval',
+    status: 'running' | 'waiting-approval' | 'waiting-input',
   ): void {
     if (!conversation.activeTurn) {
       return;

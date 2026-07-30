@@ -60,6 +60,7 @@ export class MessageListRenderer extends Component {
         && (
           status === 'running'
           || status === 'waiting-approval'
+          || status === 'waiting-input'
           || status === 'interrupted'
         )
       );

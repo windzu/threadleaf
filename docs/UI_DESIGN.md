@@ -59,6 +59,8 @@ not used as a large background or for ordinary body text.
 - `idle`: composer ready; no status label required.
 - `running`: animated status, stop action, context controls disabled.
 - `waiting-approval`: approval card and highlighted activity state.
+- `waiting-input`: inline questions in the scrollable transcript and a
+  highlighted activity state until the user responds.
 - `completed`: stable transcript; composer ready for a follow-up.
 - `failed` or `interrupted`: recovery treatment adjacent to the composer.
 
