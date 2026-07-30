@@ -17,6 +17,7 @@ import type {
 } from '../runtime/RuntimeCoordinator';
 import { renderConversationHistoryControl } from './ConversationHistoryControl';
 import { renderThreadleafComposer } from './ThreadleafComposer';
+import { THREADLEAF_NAV_ICON } from './icons';
 import { MessageListRenderer } from './MessageListRenderer';
 
 export const VIEW_TYPE_THREADLEAF = 'threadleaf-agent-view';
@@ -54,7 +55,7 @@ export class ThreadleafView extends ItemView {
   }
 
   getIcon(): string {
-    return 'logo-crystal';
+    return THREADLEAF_NAV_ICON;
   }
 
   focusComposer(): void {
