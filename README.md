@@ -71,9 +71,31 @@ is documented in [Upstream Source Boundary](docs/UPSTREAM.md).
 
 See [Project Vision](docs/VISION.md) for the product boundary and architectural direction. A Chinese version is available at [项目愿景](docs/VISION.zh-CN.md).
 
+## Install the public beta
+
+Threadleaf is currently distributed through GitHub Releases and
+[BRAT](https://github.com/TfTHacker/obsidian42-brat).
+
+1. Install and enable BRAT from Obsidian's Community plugins.
+2. Run `BRAT: Add a beta plugin for testing` from the command palette.
+3. Enter `windzu/threadleaf`.
+4. Enable Threadleaf in Community plugins.
+
+Threadleaf requires:
+
+- Obsidian 1.7.2 or newer on desktop;
+- the `codex` CLI installed and available on the local machine;
+- an authenticated Codex session.
+
+Threadleaf launches `codex app-server` as a local child process. Model requests
+use the user's existing Codex authentication. Depending on the approved tool
+calls, Codex can read or modify files in the Vault and run local commands.
+Threadleaf stores page mappings and conversations in `.threadleaf` inside the
+Vault. It has no separate hosted service and does not add telemetry.
+
 ## Status
 
-Early working prototype.
+Version 0.1.0 is an early public beta.
 
 Implemented:
 
@@ -82,21 +104,24 @@ Implemented:
 - Markdown and Bases page detection;
 - unlimited page-conversation mappings and last-conversation restoration;
 - mapping migration after file or folder renames;
+- page-scoped conversation history and lazy first-send creation;
+- conversation-level model discovery and selection;
+- additional page context through `@` mentions;
+- native Markdown, code, reasoning, and tool-status rendering;
 - Codex app-server conversations, streaming, tool status, cancellation, and approvals;
 - one shared Codex app-server process with per-conversation thread routing;
 - background-safe runtimes that are not cancelled by page navigation;
-- local deployment to a development vault.
+- interrupted-turn recovery and durable partial output.
 
 Still in progress:
 
-- production message and diff rendering;
-- `@` note mentions and context picker;
+- specialized file diff and command output rendering;
 - ask-user forms and richer approval choices;
-- settings and model discovery;
-- running/completed badges on the floating entry;
+- a user-facing settings screen;
+- tool-call deduplication across every Codex model variant;
 - split-pane, pop-out-window, and failure-recovery hardening.
 
-The first milestone focuses on macOS desktop and a single Obsidian vault.
+The first public beta focuses on macOS desktop and a single Obsidian Vault.
 
 See [Architecture](docs/ARCHITECTURE.md) for runtime ownership and lifecycle
 invariants.
