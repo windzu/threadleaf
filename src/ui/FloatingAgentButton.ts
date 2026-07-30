@@ -23,9 +23,10 @@ export class FloatingAgentButton {
 
   mount(): void {
     const workspaceContainer = this.app.workspace.containerEl;
-    const pageContainer = workspaceContainer.querySelector<HTMLElement>(
-      '.workspace-split.mod-root .workspace-leaf.mod-active .workspace-leaf-content',
-    ) ?? workspaceContainer;
+    const pageLeaf = this.app.workspace.getMostRecentLeaf(
+      this.app.workspace.rootSplit,
+    );
+    const pageContainer = pageLeaf?.view.containerEl ?? workspaceContainer;
     if (this.element?.isConnected && this.element.parentElement === pageContainer) {
       return;
     }

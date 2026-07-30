@@ -1,6 +1,6 @@
 {
   "name": "threadleaf",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A page-native agent for Obsidian",
   "main": "main.js",
   "scripts": {
