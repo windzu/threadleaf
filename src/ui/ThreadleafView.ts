@@ -1,27 +1,28 @@
 import { ItemView, Notice, WorkspaceLeaf } from 'obsidian';
 
-import type { ConversationRepository } from '../conversations/ConversationRepository';
+import type { ConversationMeta } from '../core/types';
 import type {
   PageConversationRoute,
   PageConversationRouter,
 } from '../page-context/PageConversationRouter';
+import type { PageConversationService } from '../page-context/PageConversationService';
 import type {
   ConversationRuntimeSnapshot,
   RuntimeCoordinator,
 } from '../runtime/RuntimeCoordinator';
+import { renderConversationHistoryControl } from './ConversationHistoryControl';
 
 export const VIEW_TYPE_THREADLEAF = 'threadleaf-agent-view';
 
 export class ThreadleafView extends ItemView {
   private draftPagePath: string | null = null;
-  private conversationCreationFlights = new Map<string, Promise<string>>();
+  private history: ConversationMeta[] = [];
 
   constructor(
     leaf: WorkspaceLeaf,
     private readonly router: PageConversationRouter,
-    private readonly conversations: ConversationRepository,
+    private readonly pageConversations: PageConversationService,
     private readonly runtimeCoordinator: RuntimeCoordinator,
-    private readonly defaultModel: string,
   ) {
     super(leaf);
   }
@@ -58,30 +59,50 @@ export class ThreadleafView extends ItemView {
         this.draftPagePath !== route.page?.path
         && conversationId === route.activeConversationId
       ) {
-        this.renderConversation(route, snapshot);
+        if (snapshot.conversation) {
+          const updated = this.pageConversations.summarize(snapshot.conversation);
+          this.history = this.history.map(item => (
+            item.id === updated.id ? updated : item
+          ));
+        }
+        this.renderConversation(route, snapshot, this.history);
       }
     }));
   }
 
   private async renderRoute(route: PageConversationRoute): Promise<void> {
+    const history = await this.pageConversations.getHistory(route);
+    if (
+      this.router.getRoute().page?.path !== route.page?.path
+      || this.router.getRoute().activeConversationId !== route.activeConversationId
+    ) {
+      return;
+    }
+    this.history = history?.conversations ?? [];
     if (this.draftPagePath === route.page?.path) {
-      this.renderConversation(route, null);
+      this.renderConversation(route, null, this.history);
       return;
     }
     const conversationId = route.activeConversationId;
     if (!conversationId) {
-      this.renderConversation(route, null);
+      this.renderConversation(route, null, this.history);
       return;
     }
     const snapshot = await this.runtimeCoordinator.getSnapshot(conversationId);
-    if (this.router.getRoute().activeConversationId === conversationId) {
-      this.renderConversation(route, snapshot);
+    const currentRoute = this.router.getRoute();
+    if (
+      currentRoute.page?.path === route.page?.path
+      && currentRoute.activeConversationId === conversationId
+      && this.draftPagePath !== route.page?.path
+    ) {
+      this.renderConversation(route, snapshot, this.history);
     }
   }
 
   private renderConversation(
     route: PageConversationRoute,
     snapshot: ConversationRuntimeSnapshot | null,
+    history: ConversationMeta[],
   ): void {
     const page = route.page;
     this.contentEl.empty();
@@ -106,47 +127,20 @@ export class ThreadleafView extends ItemView {
       return;
     }
 
-    if (route.conversationIds.length > 0) {
-      const conversationBar = this.contentEl.createDiv(
-        'threadleaf-view__conversation-bar',
-      );
-      const isDraft = this.draftPagePath === page.path
-        || !snapshot?.conversation;
-      const selector = conversationBar.createEl('select', {
-        cls: 'dropdown threadleaf-view__conversation-select',
+    if (history.length > 0) {
+      renderConversationHistoryControl(this.contentEl, {
+        history,
+        activeConversationId: route.activeConversationId,
+        isDraft: this.draftPagePath === page.path || !snapshot?.conversation,
+        onStartDraft: () => this.startDraft(),
+        onSelect: async conversationId => {
+          this.draftPagePath = null;
+          await this.pageConversations.selectConversation(
+            page.path,
+            conversationId,
+          );
+        },
       });
-      if (isDraft) {
-        selector.createEl('option', {
-          value: '',
-          text: 'New conversation',
-        });
-      }
-      for (const conversationId of route.conversationIds) {
-        selector.createEl('option', {
-          value: conversationId,
-          text: conversationId === route.activeConversationId
-            ? snapshot?.conversation?.title ?? 'Current conversation'
-            : `Conversation ${conversationId.slice(0, 8)}`,
-        });
-      }
-      selector.value = isDraft ? '' : route.activeConversationId ?? '';
-      selector.addEventListener('change', () => {
-        if (!selector.value) {
-          return;
-        }
-        this.draftPagePath = null;
-        void this.router.selectConversation(selector.value);
-      });
-
-      if (!isDraft) {
-        const newButton = conversationBar.createEl('button', {
-          cls: 'threadleaf-view__new-conversation',
-          text: 'New',
-        });
-        newButton.addEventListener('click', () => {
-          this.startDraft();
-        });
-      }
     }
 
     const messages = this.contentEl.createDiv('threadleaf-view__messages');
@@ -302,7 +296,7 @@ export class ThreadleafView extends ItemView {
       return;
     }
     this.draftPagePath = route.page.path;
-    this.renderConversation(route, null);
+    this.renderConversation(route, null, this.history);
   }
 
   private async send(rawText: string): Promise<void> {
@@ -315,8 +309,11 @@ export class ThreadleafView extends ItemView {
     try {
       const conversationId = this.draftPagePath === pagePath
         || !route.activeConversationId
-        ? await this.ensureConversationForPage(pagePath)
+        ? await this.pageConversations.ensureConversationForPage(pagePath)
         : route.activeConversationId;
+      if (this.draftPagePath === pagePath) {
+        this.draftPagePath = null;
+      }
       await this.runtimeCoordinator.send(
         conversationId,
         text,
@@ -325,33 +322,6 @@ export class ThreadleafView extends ItemView {
     } catch (error) {
       new Notice(error instanceof Error ? error.message : String(error));
     }
-  }
-
-  private async ensureConversationForPage(pagePath: string): Promise<string> {
-    let flight = this.conversationCreationFlights.get(pagePath);
-    if (!flight) {
-      flight = this.createConversationForPage(pagePath);
-      this.conversationCreationFlights.set(pagePath, flight);
-    }
-    try {
-      return await flight;
-    } finally {
-      if (this.conversationCreationFlights.get(pagePath) === flight) {
-        this.conversationCreationFlights.delete(pagePath);
-      }
-    }
-  }
-
-  private async createConversationForPage(pagePath: string): Promise<string> {
-    const conversation = await this.conversations.create(this.defaultModel);
-    await this.router.associateConversationForPage(pagePath, conversation.id);
-    if (this.draftPagePath === pagePath) {
-      this.draftPagePath = null;
-      if (this.router.getRoute().page?.path === pagePath) {
-        void this.renderRoute(this.router.getRoute());
-      }
-    }
-    return conversation.id;
   }
 
   private statusLabel(status: ConversationRuntimeSnapshot['status']): string {

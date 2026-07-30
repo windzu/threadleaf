@@ -74,6 +74,8 @@ runtime accepts only notifications matching its current `threadId` and
 ## Current boundaries
 
 - `src/page-context`: active page detection and page-to-conversation routing.
+- `src/page-context/PageConversationService`: page-scoped history summaries,
+  lazy first-send creation, and conversation selection.
 - `src/conversations`: persisted conversation content and provider session
   metadata.
 - `src/runtime/RuntimeCoordinator`: task registry, event forwarding, and global

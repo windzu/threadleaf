@@ -12,6 +12,7 @@ import {
 } from './page-context/PageAgentIndex';
 import { PageContextResolver } from './page-context/PageContextResolver';
 import { PageConversationRouter } from './page-context/PageConversationRouter';
+import { PageConversationService } from './page-context/PageConversationService';
 import { CodexAppServerGateway } from './providers/codex/runtime/CodexAppServerGateway';
 import { CodexChatRuntime } from './providers/codex/runtime/CodexChatRuntime';
 import { RuntimeCoordinator } from './runtime/RuntimeCoordinator';
@@ -24,6 +25,7 @@ export default class ThreadleafPlugin extends Plugin {
   private pageContext: PageContextResolver | null = null;
   private pageIndex: PageAgentIndex | null = null;
   private router: PageConversationRouter | null = null;
+  private pageConversations: PageConversationService | null = null;
   private conversations: ConversationRepository | null = null;
   private runtimeCoordinator: RuntimeCoordinator | null = null;
   private codexGateway: CodexAppServerGateway | null = null;
@@ -56,15 +58,19 @@ export default class ThreadleafPlugin extends Plugin {
 
     this.pageContext = new PageContextResolver(this.app);
     this.router = new PageConversationRouter(this.pageContext, this.pageIndex);
+    this.pageConversations = new PageConversationService(
+      this.router,
+      this.conversations,
+      this.threadleafSettings.model,
+    );
 
     this.registerView(
       VIEW_TYPE_THREADLEAF,
       leaf => new ThreadleafView(
         leaf,
         this.requireRouter(),
-        this.requireConversations(),
+        this.requirePageConversations(),
         this.requireRuntimeCoordinator(),
-        this.requireSettings().model,
       ),
     );
 
@@ -170,6 +176,13 @@ export default class ThreadleafPlugin extends Plugin {
       throw new Error('Threadleaf runtime coordinator is not initialized.');
     }
     return this.runtimeCoordinator;
+  }
+
+  private requirePageConversations(): PageConversationService {
+    if (!this.pageConversations) {
+      throw new Error('Page conversation service is not initialized.');
+    }
+    return this.pageConversations;
   }
 
   private requireSettings(): ThreadleafSettings {
