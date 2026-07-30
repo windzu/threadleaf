@@ -24,6 +24,7 @@ import {
   shouldShowFloatingAgentButton,
 } from './ui/AgentEntryVisibility';
 import { FloatingAgentButton } from './ui/FloatingAgentButton';
+import { THREADLEAF_NAV_ICON } from './ui/icons';
 import { ThreadleafView, VIEW_TYPE_THREADLEAF } from './ui/ThreadleafView';
 
 export default class ThreadleafPlugin extends Plugin {
@@ -185,7 +186,7 @@ export default class ThreadleafPlugin extends Plugin {
     this.register(() => this.floatingButton?.unmount());
 
     this.addRibbonIcon(
-      'logo-crystal',
+      THREADLEAF_NAV_ICON,
       'Open Threadleaf for the current page',
       () => {
         void this.openAgent();
