@@ -17,6 +17,7 @@ import type {
 } from '../runtime/RuntimeCoordinator';
 import { renderConversationHistoryControl } from './ConversationHistoryControl';
 import { renderThreadleafComposer } from './ThreadleafComposer';
+import { MessageListRenderer } from './MessageListRenderer';
 
 export const VIEW_TYPE_THREADLEAF = 'threadleaf-agent-view';
 
@@ -30,6 +31,8 @@ export class ThreadleafView extends ItemView {
   private draftPagePath: string | null = null;
   private history: ConversationMeta[] = [];
   private composerDrafts = new Map<string, ComposerDraft>();
+  private messageRenderer: MessageListRenderer | null = null;
+  private messageRenderGeneration = 0;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -120,6 +123,17 @@ export class ThreadleafView extends ItemView {
     history: ConversationMeta[],
   ): void {
     const page = route.page;
+    const previousMessages = this.contentEl.querySelector<HTMLElement>(
+      '.threadleaf-view__messages',
+    );
+    const previousScrollTop = previousMessages?.scrollTop ?? 0;
+    const stickToBottom = !previousMessages || (
+      previousMessages.scrollHeight
+      - previousMessages.scrollTop
+      - previousMessages.clientHeight
+      < 72
+    );
+    this.disposeMessageRenderer();
     this.contentEl.empty();
     this.contentEl.addClass('threadleaf-view');
 
@@ -165,40 +179,25 @@ export class ThreadleafView extends ItemView {
         text: `Ask anything about ${page.basename}.`,
       });
     }
-    for (const message of snapshot?.conversation?.messages ?? []) {
-      const messageElement = messages.createDiv({
-        cls: `threadleaf-message threadleaf-message--${message.role}`,
-      });
-      messageElement.createDiv({
-        cls: 'threadleaf-message__role',
-        text: message.role === 'user' ? 'You' : 'Threadleaf',
-      });
-      if (message.referencedPagePaths?.length) {
-        const references = messageElement.createDiv(
-          'threadleaf-message__references',
-        );
-        for (const path of message.referencedPagePaths) {
-          references.createSpan({
-            cls: 'threadleaf-message__reference',
-            text: path,
-          });
-        }
+    const renderer = new MessageListRenderer(this.app);
+    this.messageRenderer = renderer;
+    this.addChild(renderer);
+    const renderGeneration = ++this.messageRenderGeneration;
+    void renderer.render(
+      messages,
+      snapshot?.conversation?.messages ?? [],
+      page.path,
+      snapshot?.status ?? 'idle',
+    ).then(() => {
+      if (renderGeneration !== this.messageRenderGeneration) {
+        return;
       }
-      messageElement.createDiv({
-        cls: 'threadleaf-message__content',
-        text: message.displayContent
-          ?? (message.content || (message.role === 'assistant' ? '…' : '')),
+      messages.ownerDocument.defaultView?.requestAnimationFrame(() => {
+        messages.scrollTop = stickToBottom
+          ? messages.scrollHeight
+          : previousScrollTop;
       });
-      if (message.toolCalls?.length) {
-        const tools = messageElement.createDiv('threadleaf-message__tools');
-        for (const toolCall of message.toolCalls) {
-          tools.createDiv({
-            cls: `threadleaf-tool threadleaf-tool--${toolCall.status}`,
-            text: `${toolCall.name} · ${toolCall.status}`,
-          });
-        }
-      }
-    }
+    });
 
     if (snapshot?.pendingApproval) {
       this.renderApproval(snapshot);
@@ -373,6 +372,14 @@ export class ThreadleafView extends ItemView {
       this.composerDrafts.set(pagePath, draft);
     }
     return draft;
+  }
+
+  private disposeMessageRenderer(): void {
+    if (!this.messageRenderer) {
+      return;
+    }
+    this.removeChild(this.messageRenderer);
+    this.messageRenderer = null;
   }
 
 }
