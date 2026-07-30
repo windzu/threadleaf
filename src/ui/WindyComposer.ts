@@ -1,5 +1,6 @@
-import { setIcon, setTooltip } from 'obsidian';
+import { Notice, setIcon, setTooltip } from 'obsidian';
 
+import type { PermissionMode } from '../core/types';
 import type { ConversationModelService } from '../models/types';
 import type {
   PageReference,
@@ -15,10 +16,12 @@ export interface WindyComposerOptions {
   references: PageReference[];
   selectedModel: string | undefined;
   status: ConversationTaskStatus;
+  permissionMode: PermissionMode;
   models: ConversationModelService;
   referenceService: PageReferenceService;
   onDraftChange: (text: string, references: PageReference[]) => void;
   onModelSelect: (model: string | null) => Promise<void>;
+  onPermissionModeSelect: (mode: PermissionMode) => Promise<void>;
   onSubmit: (text: string) => void;
   onStop: () => void;
 }
@@ -59,6 +62,7 @@ export function renderWindyComposer(
     models: options.models,
     onSelect: options.onModelSelect,
   });
+  renderYoloControl(rightActions, options, isRunning);
   const sendButton = rightActions.createEl('button', {
     cls: `windy-view__send-button clickable-icon${
       isRunning ? ' is-running' : ''
@@ -81,6 +85,68 @@ export function renderWindyComposer(
     } else {
       options.onSubmit(referenceComposer.input.value);
     }
+  });
+}
+
+function renderYoloControl(
+  container: HTMLElement,
+  options: WindyComposerOptions,
+  disabled: boolean,
+): void {
+  let enabled = options.permissionMode === 'yolo';
+  let saving = false;
+  const control = container.createEl('button', {
+    cls: 'windy-view__yolo-control',
+    attr: {
+      type: 'button',
+      role: 'switch',
+    },
+  });
+  control.createSpan({
+    cls: 'windy-view__yolo-label',
+    text: 'YOLO',
+  });
+  const track = control.createSpan('windy-view__yolo-track');
+  track.createSpan('windy-view__yolo-thumb');
+
+  const update = (): void => {
+    control.toggleClass('is-active', enabled);
+    control.setAttribute('aria-checked', String(enabled));
+    control.setAttribute(
+      'aria-label',
+      enabled ? 'Disable YOLO mode' : 'Enable YOLO mode',
+    );
+    control.disabled = disabled || saving;
+    setTooltip(
+      control,
+      enabled
+        ? 'YOLO is on: Codex runs without approvals and has full system access'
+        : 'YOLO is off: Codex asks for approval before sensitive actions',
+    );
+  };
+  update();
+
+  control.addEventListener('click', () => {
+    if (disabled || saving) {
+      return;
+    }
+    const nextMode: PermissionMode = enabled ? 'normal' : 'yolo';
+    saving = true;
+    update();
+    void options.onPermissionModeSelect(nextMode).then(() => {
+      enabled = nextMode === 'yolo';
+      if (enabled) {
+        new Notice(
+          'YOLO enabled: approvals are disabled and Codex has full system access.',
+        );
+      }
+    }).catch(error => {
+      const message = error instanceof Error ? error.message : String(error);
+      new Notice(`Could not change permission mode: ${message}`);
+    }).finally(() => {
+      saving = false;
+      update();
+    });
   });
 }
 
