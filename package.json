@@ -1,10 +1,11 @@
 {
   "name": "windy",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A page-native agent for Obsidian",
   "main": "main.js",
   "scripts": {
     "build": "node esbuild.config.mjs production",
+    "check:version": "node scripts/verify-version.mjs",
     "deploy:local": "node scripts/deploy-local.mjs",
     "dev": "node esbuild.config.mjs",
     "test": "tsx --test tests/**/*.test.ts",

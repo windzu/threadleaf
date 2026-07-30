@@ -28,13 +28,7 @@ jobs:
         run: npm ci
 
       - name: Verify release version
-        run: >-
-          node -e "const manifest=require('./manifest.json');
-          const pkg=require('./package.json');
-          const tag=process.env.GITHUB_REF_NAME;
-          if(!/^\d+\.\d+\.\d+$/.test(tag)) throw new Error('Release tag must use x.y.z');
-          if(manifest.version!==tag) throw new Error('manifest.json version does not match tag');
-          if(pkg.version!==tag) throw new Error('package.json version does not match tag');"
+        run: node scripts/verify-version.mjs "$GITHUB_REF_NAME"
 
       - name: Typecheck
         run: npm run typecheck

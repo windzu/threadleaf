@@ -106,23 +106,26 @@ Vault. It has no separate hosted service and does not add telemetry.
 
 ## Status
 
-Version 0.2.0 is an early public beta.
+Version 0.3.0 is the current Windy public beta.
 
 Implemented:
 
 - independent Obsidian plugin shell and `.windy` storage;
 - floating page-level entry and native right-side Agent view;
+- cohesive page-first interface with the Windy visual identity;
 - Markdown and Bases page detection;
 - unlimited page-conversation mappings and last-conversation restoration;
 - mapping migration after file or folder renames;
 - page-scoped conversation history and lazy first-send creation;
 - conversation-level model discovery and selection;
-- additional page context through `@` mentions;
+- rich inline page mentions that preserve exact Codex context paths;
 - native Markdown, code, reasoning, and tool-status rendering;
 - Codex app-server conversations, streaming, tool status, cancellation, and approvals;
+- optional YOLO execution mode with an explicit in-composer control;
 - one shared Codex app-server process with per-conversation thread routing;
 - background-safe runtimes that are not cancelled by page navigation;
-- interrupted-turn recovery and durable partial output.
+- interrupted-turn recovery and durable partial output;
+- reconciliation for repeated and stale tool events;
 - inline user-question forms that pause and resume the owning task.
 
 Still in progress:
