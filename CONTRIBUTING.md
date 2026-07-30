@@ -1,6 +1,6 @@
-# Contributing to Threadleaf
+# Contributing to Windy
 
-Threadleaf uses a pull-request-only development workflow. The `main` branch is
+Windy uses a pull-request-only development workflow. The `main` branch is
 protected and must always remain releasable.
 
 ## Branch workflow
@@ -51,14 +51,14 @@ personal branding assets into a PR.
 
 ## Architecture boundaries
 
-- Threadleaf is an independent plugin, not a Claudian module or compatibility
+- Windy is an independent plugin, not a Claudian module or compatibility
   layer.
 - Do not read or write `.claudian` data.
 - Page navigation must not cancel background agent work.
 - Page-to-conversation routing belongs in the page-context layer.
 - Provider-specific protocol behavior belongs under `src/providers/`.
 - Shared runtime contracts must remain provider-neutral.
-- Storage changes must preserve existing Threadleaf data or include an explicit
+- Storage changes must preserve existing Windy data or include an explicit
   schema migration.
 
 ## Validation

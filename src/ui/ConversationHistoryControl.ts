@@ -23,19 +23,19 @@ export function renderConversationHistoryControl(
     item => item.id === options.activeConversationId,
   );
   const conversationBar = container.createDiv(
-    'threadleaf-view__conversation-bar',
+    'windy-view__conversation-bar',
   );
   const trigger = conversationBar.createEl('button', {
-    cls: 'threadleaf-view__conversation-trigger',
+    cls: 'windy-view__conversation-trigger',
   });
   trigger.createSpan({
-    cls: 'threadleaf-view__conversation-title',
+    cls: 'windy-view__conversation-title',
     text: options.isDraft
       ? 'New conversation'
       : active?.title ?? 'Current conversation',
   });
   const chevron = trigger.createSpan({
-    cls: 'threadleaf-view__conversation-chevron',
+    cls: 'windy-view__conversation-chevron',
   });
   setIcon(chevron, 'chevron-down');
   trigger.setAttribute(
@@ -67,7 +67,7 @@ export function renderConversationHistoryControl(
     menu.showAtMouseEvent(event);
   });
   conversationBar.createSpan({
-    cls: 'threadleaf-view__conversation-count',
+    cls: 'windy-view__conversation-count',
     text: String(options.history.length),
     attr: {
       'aria-label': `${options.history.length} saved conversations`,

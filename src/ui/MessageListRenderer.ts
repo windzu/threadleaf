@@ -31,15 +31,15 @@ export class MessageListRenderer extends Component {
     const markdownRenders: Promise<void>[] = [];
     for (const [index, message] of messages.entries()) {
       const messageElement = container.createDiv({
-        cls: `threadleaf-message threadleaf-message--${message.role}`,
+        cls: `windy-message windy-message--${message.role}`,
       });
       messageElement.createDiv({
-        cls: 'threadleaf-message__role',
-        text: message.role === 'user' ? 'You' : 'Threadleaf',
+        cls: 'windy-message__role',
+        text: message.role === 'user' ? 'You' : 'Windy',
       });
       this.renderReferences(messageElement, message);
       const contentElement = messageElement.createDiv(
-        'threadleaf-message__content',
+        'windy-message__content',
       );
       const content = message.displayContent
         ?? (message.content || (message.role === 'assistant' ? '…' : ''));
@@ -58,7 +58,7 @@ export class MessageListRenderer extends Component {
           this.renderMarkdown(contentElement, content, sourcePath),
         );
       } else {
-        contentElement.addClass('threadleaf-message__content--plain');
+        contentElement.addClass('windy-message__content--plain');
         contentElement.setText(content);
       }
       this.renderThinking(messageElement, message);
@@ -83,7 +83,7 @@ export class MessageListRenderer extends Component {
     } catch {
       container.empty();
       container.removeClass('markdown-rendered');
-      container.addClass('threadleaf-message__content--plain');
+      container.addClass('windy-message__content--plain');
       container.setText(content);
     }
   }
@@ -96,11 +96,11 @@ export class MessageListRenderer extends Component {
       return;
     }
     const references = messageElement.createDiv(
-      'threadleaf-message__references',
+      'windy-message__references',
     );
     for (const path of message.referencedPagePaths) {
       references.createSpan({
-        cls: 'threadleaf-message__reference',
+        cls: 'windy-message__reference',
         text: path,
       });
     }
@@ -118,7 +118,7 @@ export class MessageListRenderer extends Component {
       return;
     }
     const details = messageElement.createEl('details', {
-      cls: 'threadleaf-thinking',
+      cls: 'windy-thinking',
     });
     details.createEl('summary', { text: 'Reasoning' });
     details.createEl('pre', { text: thinking });
@@ -131,7 +131,7 @@ export class MessageListRenderer extends Component {
     if (toolCalls.length === 0) {
       return;
     }
-    const tools = messageElement.createDiv('threadleaf-message__tools');
+    const tools = messageElement.createDiv('windy-message__tools');
     for (const toolCall of toolCalls) {
       this.renderTool(tools, toolCall);
     }
@@ -139,7 +139,7 @@ export class MessageListRenderer extends Component {
 
   private renderTool(container: HTMLElement, toolCall: ToolCallInfo): void {
     const details = container.createEl('details', {
-      cls: `threadleaf-tool threadleaf-tool--${toolCall.status}`,
+      cls: `windy-tool windy-tool--${toolCall.status}`,
     });
     details.open = (
       toolCall.isExpanded === true
@@ -147,20 +147,20 @@ export class MessageListRenderer extends Component {
       || toolCall.status === 'blocked'
     );
     const summary = details.createEl('summary', {
-      cls: 'threadleaf-tool__summary',
+      cls: 'windy-tool__summary',
     });
-    const icon = summary.createSpan('threadleaf-tool__icon');
+    const icon = summary.createSpan('windy-tool__icon');
     setIcon(icon, toolStatusIcon(toolCall.status));
     summary.createSpan({
-      cls: 'threadleaf-tool__name',
+      cls: 'windy-tool__name',
       text: formatToolName(toolCall.name),
     });
     summary.createSpan({
-      cls: 'threadleaf-tool__status',
+      cls: 'windy-tool__status',
       text: toolStatusLabel(toolCall.status),
     });
 
-    const body = details.createDiv('threadleaf-tool__body');
+    const body = details.createDiv('windy-tool__body');
     if (Object.keys(toolCall.input).length > 0) {
       this.renderPayload(body, 'Input', toolCall.input);
     }
@@ -169,7 +169,7 @@ export class MessageListRenderer extends Component {
     }
     if (body.childElementCount === 0) {
       body.createDiv({
-        cls: 'threadleaf-tool__empty',
+        cls: 'windy-tool__empty',
         text: 'No details available.',
       });
     }
@@ -180,13 +180,13 @@ export class MessageListRenderer extends Component {
     label: string,
     value: unknown,
   ): void {
-    const section = container.createDiv('threadleaf-tool__section');
+    const section = container.createDiv('windy-tool__section');
     section.createDiv({
-      cls: 'threadleaf-tool__label',
+      cls: 'windy-tool__label',
       text: label,
     });
     section.createEl('pre', {
-      cls: 'threadleaf-tool__payload',
+      cls: 'windy-tool__payload',
       text: formatToolPayload(value),
     });
   }

@@ -5,13 +5,13 @@ import type {
   ProviderCliResolutionContext,
   ProviderId,
 } from '../core/providers/types';
-import type { ThreadleafSettings } from '../core/types';
+import type { WindySettings } from '../core/types';
 import { getCodexProviderSettings } from '../providers/codex/settings';
 
-export class ThreadleafProviderHost implements ProviderHost {
+export class WindyProviderHost implements ProviderHost {
   constructor(
     readonly app: App,
-    readonly settings: ThreadleafSettings,
+    readonly settings: WindySettings,
     readonly manifest: { version?: string },
   ) {}
 

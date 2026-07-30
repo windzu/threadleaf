@@ -16,11 +16,11 @@ import type {
   RuntimeCoordinator,
 } from '../runtime/RuntimeCoordinator';
 import { renderConversationHistoryControl } from './ConversationHistoryControl';
-import { renderThreadleafComposer } from './ThreadleafComposer';
-import { THREADLEAF_NAV_ICON } from './icons';
+import { renderWindyComposer } from './WindyComposer';
+import { WINDY_NAV_ICON } from './icons';
 import { MessageListRenderer } from './MessageListRenderer';
 
-export const VIEW_TYPE_THREADLEAF = 'threadleaf-agent-view';
+export const VIEW_TYPE_WINDY = 'windy-agent-view';
 
 interface ComposerDraft {
   text: string;
@@ -28,7 +28,7 @@ interface ComposerDraft {
   selectedModel?: string;
 }
 
-export class ThreadleafView extends ItemView {
+export class WindyView extends ItemView {
   private draftPagePath: string | null = null;
   private history: ConversationMeta[] = [];
   private composerDrafts = new Map<string, ComposerDraft>();
@@ -47,20 +47,20 @@ export class ThreadleafView extends ItemView {
   }
 
   getViewType(): string {
-    return VIEW_TYPE_THREADLEAF;
+    return VIEW_TYPE_WINDY;
   }
 
   getDisplayText(): string {
-    return 'Threadleaf';
+    return 'Windy';
   }
 
   getIcon(): string {
-    return THREADLEAF_NAV_ICON;
+    return WINDY_NAV_ICON;
   }
 
   focusComposer(): void {
     this.contentEl
-      .querySelector<HTMLTextAreaElement>('.threadleaf-view__input')
+      .querySelector<HTMLTextAreaElement>('.windy-view__input')
       ?.focus();
   }
 
@@ -125,7 +125,7 @@ export class ThreadleafView extends ItemView {
   ): void {
     const page = route.page;
     const previousMessages = this.contentEl.querySelector<HTMLElement>(
-      '.threadleaf-view__messages',
+      '.windy-view__messages',
     );
     const previousScrollTop = previousMessages?.scrollTop ?? 0;
     const stickToBottom = !previousMessages || (
@@ -136,18 +136,18 @@ export class ThreadleafView extends ItemView {
     );
     this.disposeMessageRenderer();
     this.contentEl.empty();
-    this.contentEl.addClass('threadleaf-view');
+    this.contentEl.addClass('windy-view');
 
-    const header = this.contentEl.createDiv('threadleaf-view__header');
+    const header = this.contentEl.createDiv('windy-view__header');
     header.createEl('div', {
-      cls: 'threadleaf-view__eyebrow',
+      cls: 'windy-view__eyebrow',
       text: 'PAGE AGENT',
     });
     header.createEl('h2', {
       text: page?.basename ?? 'No active page',
     });
     header.createEl('p', {
-      cls: 'threadleaf-view__context',
+      cls: 'windy-view__context',
       text: page
         ? `Context: ${page.path}`
         : 'Open a Markdown or Bases page to start a page-native conversation.',
@@ -173,10 +173,10 @@ export class ThreadleafView extends ItemView {
       });
     }
 
-    const messages = this.contentEl.createDiv('threadleaf-view__messages');
+    const messages = this.contentEl.createDiv('windy-view__messages');
     if (!snapshot?.conversation) {
       messages.createDiv({
-        cls: 'threadleaf-view__empty',
+        cls: 'windy-view__empty',
         text: `Ask anything about ${page.basename}.`,
       });
     }
@@ -206,7 +206,7 @@ export class ThreadleafView extends ItemView {
 
     if (snapshot?.error) {
       this.contentEl.createDiv({
-        cls: 'threadleaf-view__error',
+        cls: 'windy-view__error',
         text: snapshot.error,
       });
     }
@@ -218,7 +218,7 @@ export class ThreadleafView extends ItemView {
     const status = snapshot?.status ?? 'idle';
     const composerDraft = this.getComposerDraft(page.path);
     const isDraft = !snapshot?.conversation;
-    renderThreadleafComposer(this.contentEl, {
+    renderWindyComposer(this.contentEl, {
       primaryPage: page,
       text: composerDraft.text,
       references: composerDraft.references,
@@ -259,10 +259,10 @@ export class ThreadleafView extends ItemView {
       return;
     }
 
-    const container = this.contentEl.createDiv('threadleaf-view__approval');
+    const container = this.contentEl.createDiv('windy-view__approval');
     container.createEl('strong', { text: 'Approval required' });
     container.createEl('p', { text: approval.description });
-    const actions = container.createDiv('threadleaf-view__approval-actions');
+    const actions = container.createDiv('windy-view__approval-actions');
     const allow = actions.createEl('button', {
       cls: 'mod-cta',
       text: 'Allow once',
@@ -284,12 +284,12 @@ export class ThreadleafView extends ItemView {
     if (!conversationId) {
       return;
     }
-    const container = this.contentEl.createDiv('threadleaf-view__interrupted');
+    const container = this.contentEl.createDiv('windy-view__interrupted');
     container.createEl('strong', { text: 'Response interrupted' });
     container.createEl('p', {
       text: 'Partial output was preserved. Retry the original request or continue from here.',
     });
-    const actions = container.createDiv('threadleaf-view__interrupted-actions');
+    const actions = container.createDiv('windy-view__interrupted-actions');
     const retry = actions.createEl('button', { text: 'Retry' });
     retry.addEventListener('click', () => {
       this.runRecoveryAction(

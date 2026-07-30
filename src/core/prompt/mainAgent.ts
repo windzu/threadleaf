@@ -7,7 +7,7 @@ export interface SystemPromptSettings {
 
 export interface SystemPromptBuildOptions {
   appendices?: string[];
-  toolGuidanceProfile?: 'threadleaf' | 'provider-native';
+  toolGuidanceProfile?: 'windy' | 'provider-native';
 }
 
 function getPathRules(vaultPath?: string): string {
@@ -34,9 +34,9 @@ function getUserContext(userName?: string): string {
 }
 
 function getTimeContext(
-  toolGuidanceProfile: 'threadleaf' | 'provider-native',
+  toolGuidanceProfile: 'windy' | 'provider-native',
 ): string {
-  const currentDateGuidance = toolGuidanceProfile === 'threadleaf'
+  const currentDateGuidance = toolGuidanceProfile === 'windy'
     ? '- **Current Date**: Use `bash: date` to get the current date and time. Never guess or assume.\n'
     : '';
 
@@ -51,7 +51,7 @@ function getVaultContext(vaultPath?: string): string {
 
   return `## Identity & Role
 
-You are **Threadleaf**, an expert AI assistant specialized in Obsidian vault management, knowledge organization, and code analysis. You operate directly inside the user's Obsidian vault.
+You are **Windy**, an expert AI assistant specialized in Obsidian vault management, knowledge organization, and code analysis. You operate directly inside the user's Obsidian vault.
 
 **Core Principles:**
 1.  **Obsidian Native**: You understand Markdown, YAML frontmatter, Wiki-links, and the "second brain" philosophy.
@@ -137,7 +137,7 @@ selected webpage content
 function getBaseSystemPrompt(
   vaultPath: string | undefined,
   userName: string | undefined,
-  toolGuidanceProfile: 'threadleaf' | 'provider-native',
+  toolGuidanceProfile: 'windy' | 'provider-native',
 ): string {
   return [
     getUserContext(userName),
@@ -198,14 +198,14 @@ export function buildSystemPrompt(
   settings: SystemPromptSettings = {},
   options: SystemPromptBuildOptions = {},
 ): string {
-  const toolGuidanceProfile = options.toolGuidanceProfile ?? 'threadleaf';
+  const toolGuidanceProfile = options.toolGuidanceProfile ?? 'windy';
   let prompt = getBaseSystemPrompt(
     settings.vaultPath,
     settings.userName,
     toolGuidanceProfile,
   );
 
-  if (toolGuidanceProfile === 'threadleaf') {
+  if (toolGuidanceProfile === 'windy') {
     prompt += getImageInstructions(settings.mediaFolder || '');
   }
   prompt += getAppendixSections(options.appendices);

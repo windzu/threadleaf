@@ -7,7 +7,7 @@ import type { ConversationTaskStatus } from '../runtime/RuntimeCoordinator';
 import { renderModelPickerControl } from './ModelPickerControl';
 import { renderPageReferenceComposer } from './PageReferenceComposer';
 
-export interface ThreadleafComposerOptions {
+export interface WindyComposerOptions {
   primaryPage: PageReference;
   text: string;
   references: PageReference[];
@@ -21,11 +21,11 @@ export interface ThreadleafComposerOptions {
   onStop: () => void;
 }
 
-export function renderThreadleafComposer(
+export function renderWindyComposer(
   container: HTMLElement,
-  options: ThreadleafComposerOptions,
+  options: WindyComposerOptions,
 ): void {
-  const composer = container.createDiv('threadleaf-view__composer');
+  const composer = container.createDiv('windy-view__composer');
   const isRunning = (
     options.status === 'running'
     || options.status === 'waiting-approval'
@@ -39,10 +39,10 @@ export function renderThreadleafComposer(
     onChange: options.onDraftChange,
     onSubmit: options.onSubmit,
   });
-  const actions = composer.createDiv('threadleaf-view__composer-actions');
+  const actions = composer.createDiv('windy-view__composer-actions');
   referenceComposer.createAddButton(actions);
   actions.createDiv({
-    cls: `threadleaf-view__status threadleaf-view__status--${options.status}`,
+    cls: `windy-view__status windy-view__status--${options.status}`,
     text: statusLabel(options.status),
   });
   renderModelPickerControl(actions, {

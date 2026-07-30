@@ -33,9 +33,9 @@ export class FloatingAgentButton {
     this.unmount();
 
     const button = pageContainer.createEl('button', {
-      cls: 'threadleaf-floating-button',
+      cls: 'windy-floating-button',
       attr: {
-        'aria-label': 'Open Threadleaf for the current page',
+        'aria-label': 'Open Windy for the current page',
         type: 'button',
       },
     });
@@ -45,7 +45,7 @@ export class FloatingAgentButton {
       : availableIcons.has('obsidian')
         ? 'obsidian'
         : 'gem';
-    button.dataset.threadleafIcon = iconId;
+    button.dataset.windyIcon = iconId;
     setIcon(button, iconId);
     button.addEventListener('click', this.onClick);
     this.element = button;
@@ -86,15 +86,15 @@ export class FloatingAgentButton {
       'failed',
       'interrupted',
     ]) {
-      button.removeClass(`threadleaf-floating-button--${status}`);
+      button.removeClass(`windy-floating-button--${status}`);
     }
-    button.addClass(`threadleaf-floating-button--${this.activity.status}`);
-    button.dataset.threadleafStatus = this.activity.status;
+    button.addClass(`windy-floating-button--${this.activity.status}`);
+    button.dataset.windyStatus = this.activity.status;
 
-    button.querySelector('.threadleaf-floating-button__badge')?.remove();
+    button.querySelector('.windy-floating-button__badge')?.remove();
     if (this.activity.badgeCount > 0) {
       button.createSpan({
-        cls: 'threadleaf-floating-button__badge',
+        cls: 'windy-floating-button__badge',
         text: this.activity.badgeCount > 9
           ? '9+'
           : String(this.activity.badgeCount),
@@ -113,25 +113,25 @@ export class FloatingAgentButton {
   private getActivityLabel(): string {
     switch (this.activity.status) {
       case 'waiting-approval':
-        return `${this.activity.waitingApprovalCount} Threadleaf task${
+        return `${this.activity.waitingApprovalCount} Windy task${
           this.activity.waitingApprovalCount === 1 ? '' : 's'
         } need approval`;
       case 'running':
-        return `${this.activity.runningCount} Threadleaf task${
+        return `${this.activity.runningCount} Windy task${
           this.activity.runningCount === 1 ? '' : 's'
         } running`;
       case 'failed':
-        return `${this.activity.failedCount} Threadleaf task${
+        return `${this.activity.failedCount} Windy task${
           this.activity.failedCount === 1 ? '' : 's'
         } failed`;
       case 'interrupted':
-        return `${this.activity.interruptedCount} Threadleaf task${
+        return `${this.activity.interruptedCount} Windy task${
           this.activity.interruptedCount === 1 ? '' : 's'
         } interrupted`;
       case 'completed':
-        return 'Threadleaf task completed';
+        return 'Windy task completed';
       default:
-        return 'Open Threadleaf for the current page';
+        return 'Open Windy for the current page';
     }
   }
 }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { DEFAULT_THREADLEAF_SETTINGS } from '../../src/app/settings';
+import { DEFAULT_WINDY_SETTINGS } from '../../src/app/settings';
 import {
   CodexConversationModelService,
   type ConversationModelTarget,
@@ -63,7 +63,7 @@ describe('ConversationModelService', () => {
     const service = new CodexConversationModelService(
       gateway,
       target,
-      structuredClone(DEFAULT_THREADLEAF_SETTINGS),
+      structuredClone(DEFAULT_WINDY_SETTINGS),
     );
 
     const [first, second] = await Promise.all([
@@ -107,7 +107,7 @@ describe('ConversationModelService', () => {
     const service = new CodexConversationModelService(
       gateway,
       target,
-      structuredClone(DEFAULT_THREADLEAF_SETTINGS),
+      structuredClone(DEFAULT_WINDY_SETTINGS),
     );
 
     await service.select('conversation-1', 'gpt-5.6-terra');
@@ -134,7 +134,7 @@ describe('ConversationModelService', () => {
       {
         async setModel(): Promise<void> {},
       },
-      structuredClone(DEFAULT_THREADLEAF_SETTINGS),
+      structuredClone(DEFAULT_WINDY_SETTINGS),
     );
 
     assert.equal(service.getSelectionLabel(undefined), 'Auto');

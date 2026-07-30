@@ -1,4 +1,4 @@
-.threadleaf-floating-button {
+.windy-floating-button {
   align-items: center;
   background: var(--interactive-accent);
   border: 1px solid var(--background-modifier-border);
@@ -20,46 +20,46 @@
   z-index: var(--layer-popover);
 }
 
-.threadleaf-floating-button[hidden] {
+.windy-floating-button[hidden] {
   display: none;
 }
 
-.threadleaf-floating-button:hover {
+.windy-floating-button:hover {
   box-shadow: 0 10px 30px rgb(0 0 0 / 32%);
   transform: translateY(-1px);
 }
 
-.threadleaf-floating-button.threadleaf-floating-button--running {
+.windy-floating-button.windy-floating-button--running {
   box-shadow:
     0 0 0 3px var(--color-blue),
     0 8px 24px rgb(0 0 0 / 28%);
 }
 
-.threadleaf-floating-button.threadleaf-floating-button--waiting-approval {
+.windy-floating-button.windy-floating-button--waiting-approval {
   box-shadow:
     0 0 0 3px var(--color-orange),
     0 8px 24px rgb(0 0 0 / 28%);
 }
 
-.threadleaf-floating-button.threadleaf-floating-button--completed {
+.windy-floating-button.windy-floating-button--completed {
   box-shadow:
     0 0 0 3px var(--color-green),
     0 8px 24px rgb(0 0 0 / 28%);
 }
 
-.threadleaf-floating-button.threadleaf-floating-button--failed {
+.windy-floating-button.windy-floating-button--failed {
   box-shadow:
     0 0 0 3px var(--color-red),
     0 8px 24px rgb(0 0 0 / 28%);
 }
 
-.threadleaf-floating-button.threadleaf-floating-button--interrupted {
+.windy-floating-button.windy-floating-button--interrupted {
   box-shadow:
     0 0 0 3px var(--color-orange),
     0 8px 24px rgb(0 0 0 / 28%);
 }
 
-.threadleaf-floating-button__badge {
+.windy-floating-button__badge {
   align-items: center;
   background: var(--color-red);
   border: 2px solid var(--background-primary);
@@ -79,20 +79,20 @@
   top: -5px;
 }
 
-.threadleaf-floating-button--running .threadleaf-floating-button__badge {
+.windy-floating-button--running .windy-floating-button__badge {
   background: var(--color-blue);
 }
 
-.threadleaf-floating-button--waiting-approval .threadleaf-floating-button__badge {
+.windy-floating-button--waiting-approval .windy-floating-button__badge {
   background: var(--color-orange);
 }
 
-.threadleaf-floating-button svg {
+.windy-floating-button svg {
   height: 27px;
   width: 27px;
 }
 
-.threadleaf-view {
+.windy-view {
   display: flex;
   flex-direction: column;
   gap: var(--size-4-3);
@@ -100,38 +100,38 @@
   padding: var(--size-4-4);
 }
 
-.threadleaf-view__header h2 {
+.windy-view__header h2 {
   margin: var(--size-4-1) 0;
 }
 
-.threadleaf-view__eyebrow {
+.windy-view__eyebrow {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   font-weight: var(--font-semibold);
   letter-spacing: 0.08em;
 }
 
-.threadleaf-view__context {
+.windy-view__context {
   color: var(--text-muted);
   overflow-wrap: anywhere;
 }
 
-.threadleaf-view__conversation-state {
+.windy-view__conversation-state {
   background: var(--background-secondary);
   border-radius: var(--radius-s);
   color: var(--text-muted);
   padding: var(--size-4-3);
 }
 
-.threadleaf-view__conversation-bar,
-.threadleaf-view__composer-actions,
-.threadleaf-view__approval-actions {
+.windy-view__conversation-bar,
+.windy-view__composer-actions,
+.windy-view__approval-actions {
   align-items: center;
   display: flex;
   gap: var(--size-4-2);
 }
 
-.threadleaf-view__conversation-trigger {
+.windy-view__conversation-trigger {
   align-items: center;
   display: flex;
   gap: var(--size-4-2);
@@ -140,24 +140,24 @@
   width: 100%;
 }
 
-.threadleaf-view__conversation-title {
+.windy-view__conversation-title {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.threadleaf-view__conversation-chevron {
+.windy-view__conversation-chevron {
   color: var(--text-muted);
   display: flex;
 }
 
-.threadleaf-view__conversation-chevron svg {
+.windy-view__conversation-chevron svg {
   height: var(--icon-xs);
   width: var(--icon-xs);
 }
 
-.threadleaf-view__conversation-count {
+.windy-view__conversation-count {
   background: var(--background-modifier-hover);
   border-radius: var(--radius-s);
   color: var(--text-muted);
@@ -168,7 +168,7 @@
   text-align: center;
 }
 
-.threadleaf-view__model-trigger {
+.windy-view__model-trigger {
   align-items: center;
   display: inline-flex;
   flex: 0 0 auto;
@@ -177,16 +177,16 @@
   width: auto;
 }
 
-.threadleaf-view__model-icon {
+.windy-view__model-icon {
   display: flex;
 }
 
-.threadleaf-view__model-icon svg {
+.windy-view__model-icon svg {
   height: var(--icon-xs);
   width: var(--icon-xs);
 }
 
-.threadleaf-view__model-label {
+.windy-view__model-label {
   font-size: var(--font-ui-small);
   font-weight: var(--font-medium);
   max-width: 9rem;
@@ -195,11 +195,11 @@
   white-space: nowrap;
 }
 
-.threadleaf-view__model-trigger.is-loading {
+.windy-view__model-trigger.is-loading {
   color: var(--text-muted);
 }
 
-.threadleaf-view__empty {
+.windy-view__empty {
   align-items: center;
   display: flex;
   flex: 1;
@@ -208,7 +208,7 @@
   text-align: center;
 }
 
-.threadleaf-view__messages {
+.windy-view__messages {
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -218,58 +218,58 @@
   padding-right: var(--size-4-1);
 }
 
-.threadleaf-message {
+.windy-message {
   border-radius: var(--radius-m);
   padding: var(--size-4-3);
 }
 
-.threadleaf-message--user {
+.windy-message--user {
   align-self: flex-end;
   background: var(--interactive-accent);
   color: var(--text-on-accent);
   max-width: 88%;
 }
 
-.threadleaf-message--assistant {
+.windy-message--assistant {
   background: var(--background-secondary);
 }
 
-.threadleaf-message__role {
+.windy-message__role {
   font-size: var(--font-ui-smaller);
   font-weight: var(--font-semibold);
   margin-bottom: var(--size-4-1);
   opacity: 0.72;
 }
 
-.threadleaf-message__content {
+.windy-message__content {
   overflow-wrap: anywhere;
 }
 
-.threadleaf-message__content--plain {
+.windy-message__content--plain {
   white-space: pre-wrap;
 }
 
-.threadleaf-message__content.markdown-rendered > :first-child {
+.windy-message__content.markdown-rendered > :first-child {
   margin-top: 0;
 }
 
-.threadleaf-message__content.markdown-rendered > :last-child {
+.windy-message__content.markdown-rendered > :last-child {
   margin-bottom: 0;
 }
 
-.threadleaf-message__content.markdown-rendered pre {
+.windy-message__content.markdown-rendered pre {
   max-width: 100%;
   overflow-x: auto;
 }
 
-.threadleaf-message__tools {
+.windy-message__tools {
   display: flex;
   flex-direction: column;
   gap: var(--size-4-1);
   margin-top: var(--size-4-2);
 }
 
-.threadleaf-tool {
+.windy-tool {
   background: var(--background-primary-alt);
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-s);
@@ -278,19 +278,19 @@
   overflow: hidden;
 }
 
-.threadleaf-tool--running {
+.windy-tool--running {
   border-color: var(--color-orange);
 }
 
-.threadleaf-tool--error {
+.windy-tool--error {
   border-color: var(--color-red);
 }
 
-.threadleaf-tool--blocked {
+.windy-tool--blocked {
   border-color: var(--text-warning);
 }
 
-.threadleaf-tool__summary {
+.windy-tool__summary {
   align-items: center;
   cursor: pointer;
   display: flex;
@@ -299,34 +299,34 @@
   padding: var(--size-4-2);
 }
 
-.threadleaf-tool__summary::-webkit-details-marker {
+.windy-tool__summary::-webkit-details-marker {
   display: none;
 }
 
-.threadleaf-tool__icon {
+.windy-tool__icon {
   display: flex;
   flex: 0 0 auto;
 }
 
-.threadleaf-tool__icon svg {
+.windy-tool__icon svg {
   height: var(--icon-xs);
   width: var(--icon-xs);
 }
 
-.threadleaf-tool--running .threadleaf-tool__icon {
-  animation: threadleaf-spin 1.2s linear infinite;
+.windy-tool--running .windy-tool__icon {
+  animation: windy-spin 1.2s linear infinite;
   color: var(--color-orange);
 }
 
-.threadleaf-tool--completed .threadleaf-tool__icon {
+.windy-tool--completed .windy-tool__icon {
   color: var(--color-green);
 }
 
-.threadleaf-tool--error .threadleaf-tool__icon {
+.windy-tool--error .windy-tool__icon {
   color: var(--color-red);
 }
 
-.threadleaf-tool__name {
+.windy-tool__name {
   color: var(--text-normal);
   flex: 1;
   font-weight: var(--font-medium);
@@ -336,11 +336,11 @@
   white-space: nowrap;
 }
 
-.threadleaf-tool__status {
+.windy-tool__status {
   flex: 0 0 auto;
 }
 
-.threadleaf-tool__body {
+.windy-tool__body {
   border-top: 1px solid var(--background-modifier-border);
   display: flex;
   flex-direction: column;
@@ -348,12 +348,12 @@
   padding: var(--size-4-2);
 }
 
-.threadleaf-tool__label {
+.windy-tool__label {
   font-weight: var(--font-semibold);
   margin-bottom: 3px;
 }
 
-.threadleaf-tool__payload {
+.windy-tool__payload {
   background: var(--background-primary);
   border-radius: var(--radius-s);
   font-family: var(--font-monospace);
@@ -364,21 +364,21 @@
   white-space: pre-wrap;
 }
 
-.threadleaf-tool__empty {
+.windy-tool__empty {
   color: var(--text-faint);
 }
 
-.threadleaf-thinking {
+.windy-thinking {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   margin-top: var(--size-4-2);
 }
 
-.threadleaf-thinking summary {
+.windy-thinking summary {
   cursor: pointer;
 }
 
-.threadleaf-thinking pre {
+.windy-thinking pre {
   font-family: var(--font-text);
   margin-bottom: 0;
   max-height: 240px;
@@ -386,69 +386,69 @@
   white-space: pre-wrap;
 }
 
-@keyframes threadleaf-spin {
+@keyframes windy-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-.threadleaf-view__approval {
+.windy-view__approval {
   background: var(--background-modifier-warning);
   border: 1px solid var(--color-orange);
   border-radius: var(--radius-m);
   padding: var(--size-4-3);
 }
 
-.threadleaf-view__interrupted {
+.windy-view__interrupted {
   background: var(--background-modifier-warning);
   border: 1px solid var(--color-orange);
   border-radius: var(--radius-m);
   padding: var(--size-4-3);
 }
 
-.threadleaf-view__interrupted p {
+.windy-view__interrupted p {
   margin: var(--size-4-2) 0;
 }
 
-.threadleaf-view__interrupted-actions {
+.windy-view__interrupted-actions {
   display: flex;
   gap: var(--size-4-2);
   justify-content: flex-end;
 }
 
-.threadleaf-view__approval p {
+.windy-view__approval p {
   margin: var(--size-4-2) 0;
 }
 
-.threadleaf-view__error {
+.windy-view__error {
   background: var(--background-modifier-error);
   border-radius: var(--radius-s);
   color: var(--text-error);
   padding: var(--size-4-2);
 }
 
-.threadleaf-view__composer {
+.windy-view__composer {
   border-top: 1px solid var(--background-modifier-border);
   padding-top: var(--size-4-3);
   position: relative;
 }
 
-.threadleaf-view__input {
+.windy-view__input {
   min-height: 78px;
   resize: vertical;
   width: 100%;
 }
 
-.threadleaf-composer__references,
-.threadleaf-message__references {
+.windy-composer__references,
+.windy-message__references {
   display: flex;
   flex-wrap: wrap;
   gap: var(--size-4-1);
   margin-bottom: var(--size-4-2);
 }
 
-.threadleaf-composer__reference-chip,
-.threadleaf-message__reference {
+.windy-composer__reference-chip,
+.windy-message__reference {
   align-items: center;
   background: var(--background-secondary);
   border: 1px solid var(--background-modifier-border);
@@ -461,31 +461,31 @@
   padding: 3px 7px;
 }
 
-.threadleaf-composer__reference-icon,
-.threadleaf-composer__reference-remove {
+.windy-composer__reference-icon,
+.windy-composer__reference-remove {
   display: flex;
   flex: 0 0 auto;
 }
 
-.threadleaf-composer__reference-icon svg,
-.threadleaf-composer__reference-remove svg {
+.windy-composer__reference-icon svg,
+.windy-composer__reference-remove svg {
   height: var(--icon-xs);
   width: var(--icon-xs);
 }
 
-.threadleaf-composer__reference-title {
+.windy-composer__reference-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.threadleaf-composer__reference-remove {
+.windy-composer__reference-remove {
   height: 18px;
   padding: 2px;
   width: 18px;
 }
 
-.threadleaf-composer__mention-popup {
+.windy-composer__mention-popup {
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-m);
@@ -503,7 +503,7 @@
   z-index: var(--layer-popover);
 }
 
-.threadleaf-composer__mention-result {
+.windy-composer__mention-result {
   align-items: center;
   background: transparent;
   border: 0;
@@ -514,72 +514,72 @@
   width: 100%;
 }
 
-.threadleaf-composer__mention-result:hover,
-.threadleaf-composer__mention-result.is-active {
+.windy-composer__mention-result:hover,
+.windy-composer__mention-result.is-active {
   background: var(--background-modifier-hover);
 }
 
-.threadleaf-composer__mention-icon {
+.windy-composer__mention-icon {
   color: var(--text-muted);
   display: flex;
   flex: 0 0 auto;
 }
 
-.threadleaf-composer__mention-labels {
+.windy-composer__mention-labels {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-.threadleaf-composer__mention-title,
-.threadleaf-composer__mention-path {
+.windy-composer__mention-title,
+.windy-composer__mention-path {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.threadleaf-composer__mention-title {
+.windy-composer__mention-title {
   color: var(--text-normal);
 }
 
-.threadleaf-composer__mention-path,
-.threadleaf-composer__mention-empty {
+.windy-composer__mention-path,
+.windy-composer__mention-empty {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 
-.threadleaf-composer__mention-empty {
+.windy-composer__mention-empty {
   padding: var(--size-4-3);
   text-align: center;
 }
 
-.threadleaf-view__add-reference {
+.windy-view__add-reference {
   flex: 0 0 auto;
 }
 
-.threadleaf-view__composer-actions {
+.windy-view__composer-actions {
   justify-content: space-between;
   margin-top: var(--size-4-2);
 }
 
-.threadleaf-view__status {
+.windy-view__status {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 
-.threadleaf-view__status--running,
-.threadleaf-view__status--waiting-approval {
+.windy-view__status--running,
+.windy-view__status--waiting-approval {
   color: var(--color-orange);
 }
 
-.threadleaf-view__status--completed {
+.windy-view__status--completed {
   color: var(--color-green);
 }
 
-.threadleaf-view__status--failed {
+.windy-view__status--failed {
   color: var(--color-red);
 }
 
-.threadleaf-view__status--interrupted {
+.windy-view__status--interrupted {
   color: var(--color-orange);
 }

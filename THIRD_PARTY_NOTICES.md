@@ -2,7 +2,7 @@
 
 ## Claudian
 
-Threadleaf contains selected, modified implementation code derived from
+Windy contains selected, modified implementation code derived from
 [Claudian](https://github.com/YishenTu/claudian), locked to commit
 `a6ac2359b65a1a3695726347a7b1d281b18ab908` (version 2.0.41).
 

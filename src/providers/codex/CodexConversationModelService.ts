@@ -1,4 +1,4 @@
-import type { ThreadleafSettings } from '../../core/types';
+import type { WindySettings } from '../../core/types';
 import type {
   ConversationModelOption,
   ConversationModelService,
@@ -25,7 +25,7 @@ export class CodexConversationModelService implements ConversationModelService {
   constructor(
     private readonly gateway: ModelCatalogGateway,
     private readonly target: ConversationModelTarget,
-    private readonly settings: ThreadleafSettings,
+    private readonly settings: WindySettings,
   ) {}
 
   async getOptions(): Promise<ConversationModelOption[]> {
@@ -54,7 +54,7 @@ export class CodexConversationModelService implements ConversationModelService {
   }
 
   getAutoDescription(): string {
-    return `Uses the Threadleaf default (${formatCodexModelLabel(this.settings.model)}).`;
+    return `Uses the Windy default (${formatCodexModelLabel(this.settings.model)}).`;
   }
 
   async select(

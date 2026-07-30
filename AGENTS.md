@@ -24,7 +24,7 @@ repository.
 - Add or update tests before completing behavior changes.
 - Keep comments sparse and explain invariants or non-obvious protocol behavior.
 - Preserve existing user data and avoid destructive migrations.
-- Keep Threadleaf independent from Claudian data, modules, and application
+- Keep Windy independent from Claudian data, modules, and application
   structure.
 - Do not commit `main.js`, Vault data, local Obsidian branding assets, secrets,
   or machine-specific settings.

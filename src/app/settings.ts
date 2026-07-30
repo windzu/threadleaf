@@ -1,9 +1,9 @@
-import type { ThreadleafSettings } from '../core/types';
+import type { WindySettings } from '../core/types';
 import { DEFAULT_CODEX_PROVIDER_CONFIG } from '../providers/codex/settings';
 
 const DEFAULT_CODEX_MODEL = 'gpt-5.6-sol';
 
-export const DEFAULT_THREADLEAF_SETTINGS: ThreadleafSettings = {
+export const DEFAULT_WINDY_SETTINGS: WindySettings = {
   userName: '',
   permissionMode: 'normal',
   model: DEFAULT_CODEX_MODEL,
@@ -55,26 +55,26 @@ export const DEFAULT_THREADLEAF_SETTINGS: ThreadleafSettings = {
   hiddenProviderCommands: {},
 };
 
-export function mergeThreadleafSettings(
+export function mergeWindySettings(
   stored: unknown,
-): ThreadleafSettings {
+): WindySettings {
   if (!stored || typeof stored !== 'object' || Array.isArray(stored)) {
-    return structuredClone(DEFAULT_THREADLEAF_SETTINGS);
+    return structuredClone(DEFAULT_WINDY_SETTINGS);
   }
 
-  const input = stored as Partial<ThreadleafSettings>;
+  const input = stored as Partial<WindySettings>;
   return {
-    ...structuredClone(DEFAULT_THREADLEAF_SETTINGS),
+    ...structuredClone(DEFAULT_WINDY_SETTINGS),
     ...input,
     keyboardNavigation: {
-      ...DEFAULT_THREADLEAF_SETTINGS.keyboardNavigation,
+      ...DEFAULT_WINDY_SETTINGS.keyboardNavigation,
       ...input.keyboardNavigation,
     },
     providerConfigs: {
-      ...structuredClone(DEFAULT_THREADLEAF_SETTINGS.providerConfigs),
+      ...structuredClone(DEFAULT_WINDY_SETTINGS.providerConfigs),
       ...input.providerConfigs,
       codex: {
-        ...DEFAULT_THREADLEAF_SETTINGS.providerConfigs.codex,
+        ...DEFAULT_WINDY_SETTINGS.providerConfigs.codex,
         ...(input.providerConfigs?.codex ?? {}),
       },
     },

@@ -1,4 +1,4 @@
-# Threadleaf 项目愿景
+# Windy 项目愿景
 
 ## 背景
 
@@ -20,13 +20,13 @@ Obsidian 是一个以页面为中心的工作空间。用户通过切换 Markdow
 
 Notion 展示了更自然的交互模型：Agent 默认关联当前页面，页面切换后默认上下文自动变化，已有工作可以恢复，其他页面则通过显式引用加入。
 
-Threadleaf 的目标是把这种「页面原生」的 Agent 体验带到 Obsidian。
+Windy 的目标是把这种「页面原生」的 Agent 体验带到 Obsidian。
 
 ## 使命
 
 让当前 Obsidian 页面自然成为 Agent 对话的归属位置。
 
-当用户不再需要思考「应该切换到哪个 Agent Tab」，而只需要打开页面、唤起 Agent 并继续该页面的工作时，Threadleaf 才算成功。
+当用户不再需要思考「应该切换到哪个 Agent Tab」，而只需要打开页面、唤起 Agent 并继续该页面的工作时，Windy 才算成功。
 
 ## 核心产品模型
 
@@ -45,7 +45,7 @@ Threadleaf 的目标是把这种「页面原生」的 Agent 体验带到 Obsidia
 
 ### 页面对话状态
 
-一个页面可以拥有多条对话，但始终记录最近使用的对话。打开 Threadleaf 时：
+一个页面可以拥有多条对话，但始终记录最近使用的对话。打开 Windy 时：
 
 1. 优先恢复该页面最近使用的对话；
 2. 如果不存在，则显示属于该页面的空白新对话。
@@ -120,7 +120,7 @@ Threadleaf 的目标是把这种「页面原生」的 Agent 体验带到 Obsidia
 
 ## 技术路线
 
-Threadleaf 是一个全新的 Obsidian 插件，不是 Claudian 的 Fork 或封装。
+Windy 是一个全新的 Obsidian 插件，不是 Claudian 的 Fork 或封装。
 初始代码只从一个固定版本中复制并改造：
 
 - Provider-neutral Runtime Contract；
@@ -129,7 +129,7 @@ Threadleaf 是一个全新的 Obsidian 插件，不是 Claudian 的 Fork 或封�
 - 所需的 Conversation 和 Tool Call 类型。
 
 明确不引入 Claudian 的插件外壳、Tab、View、设置 UI、存储实现和会话
-UI。Threadleaf 从一开始就拥有独立的页面原生交互、存储 Schema、生命周期
+UI。Windy 从一开始就拥有独立的页面原生交互、存储 Schema、生命周期
 和界面。
 
 新增的交互层应包含：
@@ -167,7 +167,7 @@ UI。Threadleaf 从一开始就拥有独立的页面原生交互、存储 Schema
 
 ## 长期方向
 
-Threadleaf 可以从页面对话工具逐步演进为页面原生的 Agent 工作层：
+Windy 可以从页面对话工具逐步演进为页面原生的 Agent 工作层：
 
 - 根据页面类型提供建议动作；
 - 为 Markdown、Bases、Canvas、PDF 提供专属能力；
@@ -176,6 +176,6 @@ Threadleaf 可以从页面对话工具逐步演进为页面原生的 Agent 工�
 - 建立页面、任务与 Agent 结果之间的持久关系；
 - 基于用户自有存储实现可选的跨设备同步。
 
-Threadleaf 的长期差异化不在于接入某个特定模型，而在于建立一种稳定的交互契约：
+Windy 的长期差异化不在于接入某个特定模型，而在于建立一种稳定的交互契约：
 
 > Agent 始终知道用户正在什么地方工作，并能恢复属于那个页面的工作。

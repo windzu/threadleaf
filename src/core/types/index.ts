@@ -10,14 +10,14 @@ export {
   type SessionMetadata,
   type StreamChunk,
   type UsageInfo,
-  VIEW_TYPE_THREADLEAF,
+  VIEW_TYPE_WINDY,
 } from './chat';
 export { type ProviderId } from './provider';
 
 // Settings and command types
 export {
   type ApprovalDecision,
-  type ThreadleafSettings,
+  type WindySettings,
   type EnvironmentScope,
   type EnvSnippet,
   type HostnameCliPaths,
