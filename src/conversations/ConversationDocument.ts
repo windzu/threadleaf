@@ -1,4 +1,4 @@
-import type { Conversation } from '../core/types';
+import type { Conversation, ToolCallInfo } from '../core/types';
 
 export const CONVERSATION_DOCUMENT_VERSION = 2;
 
@@ -42,6 +42,62 @@ function isValidActiveTurn(value: unknown): boolean {
   );
 }
 
+function mergeDuplicateToolCall(
+  existing: ToolCallInfo,
+  incoming: ToolCallInfo,
+): ToolCallInfo {
+  const existingIsTerminal = existing.status !== 'running';
+  const incomingIsTerminal = incoming.status !== 'running';
+  const status = incomingIsTerminal || !existingIsTerminal
+    ? incoming.status
+    : existing.status;
+
+  return {
+    ...existing,
+    ...incoming,
+    status,
+    result: incoming.result ?? existing.result,
+    providerPayload: existing.providerPayload || incoming.providerPayload
+      ? {
+          ...existing.providerPayload,
+          ...incoming.providerPayload,
+        }
+      : undefined,
+  };
+}
+
+function normalizeDuplicateToolCalls(conversation: Conversation): void {
+  for (const message of conversation.messages) {
+    if (!message.toolCalls?.length) {
+      continue;
+    }
+
+    const callsById = new Map<string, ToolCallInfo>();
+    for (const toolCall of message.toolCalls) {
+      const existing = callsById.get(toolCall.id);
+      callsById.set(
+        toolCall.id,
+        existing ? mergeDuplicateToolCall(existing, toolCall) : toolCall,
+      );
+    }
+    message.toolCalls = Array.from(callsById.values());
+
+    if (message.contentBlocks) {
+      const seenToolIds = new Set<string>();
+      message.contentBlocks = message.contentBlocks.filter(block => {
+        if (block.type !== 'tool_use') {
+          return true;
+        }
+        if (seenToolIds.has(block.toolId)) {
+          return false;
+        }
+        seenToolIds.add(block.toolId);
+        return true;
+      });
+    }
+  }
+}
+
 function decodeConversation(value: unknown, expectedId: string): Conversation {
   if (!isRecord(value)) {
     throw new Error(`Conversation "${expectedId}" is not a JSON object.`);
@@ -65,7 +121,9 @@ function decodeConversation(value: unknown, expectedId: string): Conversation {
   if (value.sessionId !== null && typeof value.sessionId !== 'string') {
     throw new Error(`Conversation "${expectedId}" has an invalid session id.`);
   }
-  return structuredClone(value) as unknown as Conversation;
+  const conversation = structuredClone(value) as unknown as Conversation;
+  normalizeDuplicateToolCalls(conversation);
+  return conversation;
 }
 
 export function decodeConversationDocument(

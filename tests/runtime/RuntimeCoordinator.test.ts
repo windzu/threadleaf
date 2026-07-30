@@ -58,6 +58,7 @@ function createFakeRuntime(options: {
   approval?: boolean;
   partialBeforeGate?: string;
   preparedRequests?: ChatTurnRequest[];
+  scriptedChunks?: StreamChunk[];
   sessionTitles?: string[];
   sessionTitleError?: Error;
 }): ChatRuntime {
@@ -80,6 +81,11 @@ function createFakeRuntime(options: {
       };
     },
     async *query(): AsyncGenerator<StreamChunk> {
+      if (options.scriptedChunks) {
+        yield* options.scriptedChunks;
+        yield { type: 'done' };
+        return;
+      }
       if (options.partialBeforeGate) {
         yield { type: 'text', content: options.partialBeforeGate };
       }
@@ -202,6 +208,52 @@ describe('RuntimeCoordinator', () => {
     const completed = await coordinator.getSnapshot('a');
     assert.equal(completed.status, 'completed');
     assert.equal(completed.conversation?.messages.at(-1)?.content, 'approved');
+  });
+
+  it('upserts repeated tool use events and completes one tool card', async () => {
+    const conversations = new Map([['a', conversation('a')]]);
+    const coordinator = new RuntimeCoordinator(
+      host,
+      new MemoryConversationStore(conversations),
+      () => createFakeRuntime({
+        scriptedChunks: [
+          {
+            type: 'tool_use',
+            id: 'patch-1',
+            name: 'apply_patch',
+            input: { patch: 'first' },
+          },
+          {
+            type: 'tool_use',
+            id: 'patch-1',
+            name: 'apply_patch',
+            input: { patch: 'latest' },
+          },
+          {
+            type: 'tool_result',
+            id: 'patch-1',
+            content: 'updated A.md',
+            isError: false,
+          },
+        ],
+      }),
+    );
+
+    await coordinator.send('a', 'update the page', 'A.md');
+    const assistant = (await coordinator.getSnapshot('a'))
+      .conversation?.messages.at(-1);
+
+    assert.deepEqual(assistant?.toolCalls, [{
+      id: 'patch-1',
+      name: 'apply_patch',
+      input: { patch: 'latest' },
+      status: 'completed',
+      result: 'updated A.md',
+      providerPayload: undefined,
+    }]);
+    assert.deepEqual(assistant?.contentBlocks, [
+      { type: 'tool_use', toolId: 'patch-1' },
+    ]);
   });
 
   it('recovers persisted running output as interrupted and retries non-destructively', async () => {
