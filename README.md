@@ -1,12 +1,12 @@
-# Threadleaf
+# Windy
 
 > A page-native agent for Obsidian.
 
-Threadleaf is an experimental Obsidian agent that treats the page—not the chat tab—as the primary unit of work.
+Windy is an experimental Obsidian agent that treats the page—not the chat tab—as the primary unit of work.
 
 Open a note and the agent follows it. Reopen the agent and the most relevant conversation for that page returns. Mention other notes when needed, while the current page remains the stable primary context.
 
-## Why Threadleaf
+## Why Windy
 
 Most Obsidian agent plugins are chat-centric:
 
@@ -17,7 +17,7 @@ Most Obsidian agent plugins are chat-centric:
 
 This creates friction precisely where an embedded agent should feel effortless.
 
-Threadleaf starts from a different interaction model:
+Windy starts from a different interaction model:
 
 > The page is the workspace. The agent is a contextual companion to that page.
 
@@ -25,7 +25,7 @@ Threadleaf starts from a different interaction model:
 
 Make agent-assisted work in Obsidian feel native, contextual, and nearly invisible.
 
-Threadleaf should reduce the interaction cost of using an agent to one natural action: open the page you want to work on.
+Windy should reduce the interaction cost of using an agent to one natural action: open the page you want to work on.
 
 ## Product goals
 
@@ -52,17 +52,17 @@ Threadleaf should reduce the interaction cost of using an agent to one natural a
 ## Intended experience
 
 1. Open an Obsidian page.
-2. Click the floating Threadleaf button.
-3. Threadleaf restores the latest conversation associated with that page, or presents a page-scoped new conversation.
+2. Click the floating Windy button.
+3. Windy restores the latest conversation associated with that page, or presents a page-scoped new conversation.
 4. Switch to another page; the agent follows automatically.
 5. Use `@` to add other notes without changing the primary page.
 6. Return later and continue from where that page's work stopped.
 
 ## Technical direction
 
-Threadleaf is an independent plugin. Its first implementation imports a
+Windy is an independent plugin. Its first implementation imports a
 selected snapshot of Claudian's provider-neutral runtime contracts and Codex
-adapter, then reorganizes that code behind Threadleaf's page-native
+adapter, then reorganizes that code behind Windy's page-native
 architecture.
 
 It does not use Claudian as a dependency, preserve Claudian's application
@@ -73,33 +73,33 @@ See [Project Vision](docs/VISION.md) for the product boundary and architectural 
 
 ## Install the public beta
 
-Threadleaf is currently distributed through GitHub Releases and
+Windy is currently distributed through GitHub Releases and
 [BRAT](https://github.com/TfTHacker/obsidian42-brat).
 
 1. Install and enable BRAT from Obsidian's Community plugins.
 2. Run `BRAT: Add a beta plugin for testing` from the command palette.
-3. Enter `windzu/threadleaf`.
-4. Enable Threadleaf in Community plugins.
+3. Enter `windzu/windy`.
+4. Enable Windy in Community plugins.
 
-Threadleaf requires:
+Windy requires:
 
 - Obsidian 1.7.2 or newer on desktop;
 - the `codex` CLI installed and available on the local machine;
 - an authenticated Codex session.
 
-Threadleaf launches `codex app-server` as a local child process. Model requests
+Windy launches `codex app-server` as a local child process. Model requests
 use the user's existing Codex authentication. Depending on the approved tool
 calls, Codex can read or modify files in the Vault and run local commands.
-Threadleaf stores page mappings and conversations in `.threadleaf` inside the
+Windy stores page mappings and conversations in `.windy` inside the
 Vault. It has no separate hosted service and does not add telemetry.
 
 ## Status
 
-Version 0.1.0 is an early public beta.
+Version 0.2.0 is an early public beta.
 
 Implemented:
 
-- independent Obsidian plugin shell and `.threadleaf` storage;
+- independent Obsidian plugin shell and `.windy` storage;
 - floating page-level entry and native right-side Agent view;
 - Markdown and Bases page detection;
 - unlimited page-conversation mappings and last-conversation restoration;
@@ -128,16 +128,13 @@ invariants.
 
 ## Naming
 
-**Threadleaf** combines:
-
-- **Thread** — an agent conversation and its evolving work;
-- **Leaf** — an Obsidian workspace leaf and the page currently in focus.
-
-Chinese name: **页脉**.
+**Windy** is short, easy to say, and intentionally personal: it carries the
+creator's name, `wind`, while fitting an agent that moves naturally with the
+page in focus.
 
 ## License
 
-Threadleaf is licensed under the MIT License. Selected code derived from
+Windy is licensed under the MIT License. Selected code derived from
 Claudian retains its required MIT notice in
 [Third-party notices](THIRD_PARTY_NOTICES.md).
 

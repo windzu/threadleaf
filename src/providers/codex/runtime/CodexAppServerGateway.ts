@@ -10,7 +10,7 @@ import type { InitializeResult } from './codexAppServerTypes';
 import type { CodexLaunchSpec } from './codexLaunchTypes';
 
 const CODEX_APP_SERVER_CLIENT_INFO = Object.freeze({
-  name: 'threadleaf',
+  name: 'windy',
   version: '1.0.0',
 });
 

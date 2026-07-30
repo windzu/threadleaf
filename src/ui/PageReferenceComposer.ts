@@ -35,10 +35,10 @@ export function renderPageReferenceComposer(
   let mentionRange: MentionRange | null = null;
   let popup: HTMLElement | null = null;
 
-  const chips = container.createDiv('threadleaf-composer__references');
+  const chips = container.createDiv('windy-composer__references');
   renderChips();
   const input = container.createEl('textarea', {
-    cls: 'threadleaf-view__input',
+    cls: 'windy-view__input',
     attr: {
       placeholder: `Ask about ${options.primaryPage.basename}…`,
       rows: '3',
@@ -92,7 +92,7 @@ export function renderPageReferenceComposer(
     input,
     createAddButton(actions: HTMLElement): HTMLButtonElement {
       const button = actions.createEl('button', {
-        cls: 'threadleaf-view__add-reference clickable-icon',
+        cls: 'windy-view__add-reference clickable-icon',
         attr: {
           type: 'button',
           'aria-label': 'Add page context',
@@ -138,30 +138,30 @@ export function renderPageReferenceComposer(
 
   function renderPopup(): void {
     closePopup(false);
-    popup = container.createDiv('threadleaf-composer__mention-popup');
+    popup = container.createDiv('windy-composer__mention-popup');
     if (results.length === 0) {
       popup.createDiv({
-        cls: 'threadleaf-composer__mention-empty',
+        cls: 'windy-composer__mention-empty',
         text: 'No matching pages',
       });
       return;
     }
     for (const [index, reference] of results.entries()) {
       const item = popup.createEl('button', {
-        cls: `threadleaf-composer__mention-result${
+        cls: `windy-composer__mention-result${
           index === activeResult ? ' is-active' : ''
         }`,
         attr: { type: 'button' },
       });
-      const icon = item.createSpan('threadleaf-composer__mention-icon');
+      const icon = item.createSpan('windy-composer__mention-icon');
       setIcon(icon, reference.extension === 'base' ? 'database' : 'file-text');
-      const labels = item.createSpan('threadleaf-composer__mention-labels');
+      const labels = item.createSpan('windy-composer__mention-labels');
       labels.createSpan({
-        cls: 'threadleaf-composer__mention-title',
+        cls: 'windy-composer__mention-title',
         text: reference.basename,
       });
       labels.createSpan({
-        cls: 'threadleaf-composer__mention-path',
+        cls: 'windy-composer__mention-path',
         text: reference.path,
       });
       item.addEventListener('mousedown', event => event.preventDefault());
@@ -197,11 +197,11 @@ export function renderPageReferenceComposer(
   }
 
   function renderChip(reference: PageReference, removable: boolean): void {
-    const chip = chips.createDiv('threadleaf-composer__reference-chip');
-    const icon = chip.createSpan('threadleaf-composer__reference-icon');
+    const chip = chips.createDiv('windy-composer__reference-chip');
+    const icon = chip.createSpan('windy-composer__reference-icon');
     setIcon(icon, reference.extension === 'base' ? 'database' : 'file-text');
     chip.createSpan({
-      cls: 'threadleaf-composer__reference-title',
+      cls: 'windy-composer__reference-title',
       text: reference.basename,
     });
     chip.setAttribute('aria-label', reference.path);
@@ -209,7 +209,7 @@ export function renderPageReferenceComposer(
       return;
     }
     const remove = chip.createEl('button', {
-      cls: 'threadleaf-composer__reference-remove clickable-icon',
+      cls: 'windy-composer__reference-remove clickable-icon',
       attr: {
         type: 'button',
         'aria-label': `Remove ${reference.basename}`,

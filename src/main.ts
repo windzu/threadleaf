@@ -1,10 +1,10 @@
 import { Plugin } from 'obsidian';
 
 import {
-  mergeThreadleafSettings,
+  mergeWindySettings,
 } from './app/settings';
-import { ThreadleafProviderHost } from './app/ThreadleafProviderHost';
-import type { ThreadleafSettings } from './core/types';
+import { WindyProviderHost } from './app/WindyProviderHost';
+import type { WindySettings } from './core/types';
 import { ConversationRepository } from './conversations/ConversationRepository';
 import {
   PageAgentIndex,
@@ -24,10 +24,10 @@ import {
   shouldShowFloatingAgentButton,
 } from './ui/AgentEntryVisibility';
 import { FloatingAgentButton } from './ui/FloatingAgentButton';
-import { THREADLEAF_NAV_ICON } from './ui/icons';
-import { ThreadleafView, VIEW_TYPE_THREADLEAF } from './ui/ThreadleafView';
+import { WINDY_NAV_ICON } from './ui/icons';
+import { WindyView, VIEW_TYPE_WINDY } from './ui/WindyView';
 
-export default class ThreadleafPlugin extends Plugin {
+export default class WindyPlugin extends Plugin {
   private floatingButton: FloatingAgentButton | null = null;
   private pageContext: PageContextResolver | null = null;
   private pageIndex: PageAgentIndex | null = null;
@@ -38,14 +38,14 @@ export default class ThreadleafPlugin extends Plugin {
   private conversations: ConversationRepository | null = null;
   private runtimeCoordinator: RuntimeCoordinator | null = null;
   private codexGateway: CodexAppServerGateway | null = null;
-  private threadleafSettings: ThreadleafSettings | null = null;
+  private windySettings: WindySettings | null = null;
 
   async onload(): Promise<void> {
-    this.threadleafSettings = mergeThreadleafSettings(await this.loadData());
+    this.windySettings = mergeWindySettings(await this.loadData());
     this.conversations = new ConversationRepository(this.app.vault.adapter);
-    const providerHost = new ThreadleafProviderHost(
+    const providerHost = new WindyProviderHost(
       this.app,
-      this.threadleafSettings,
+      this.windySettings,
       this.manifest,
     );
     this.codexGateway = new CodexAppServerGateway(providerHost);
@@ -57,7 +57,7 @@ export default class ThreadleafPlugin extends Plugin {
 
     const pageIndexStore = new JsonFileStore<PageAgentIndexDocument>(
       this.app.vault.adapter,
-      '.threadleaf/page-agent-index.json',
+      '.windy/page-agent-index.json',
     );
     this.pageIndex = new PageAgentIndex(pageIndexStore);
     await this.pageIndex.initialize();
@@ -74,7 +74,7 @@ export default class ThreadleafPlugin extends Plugin {
     this.conversationModels = new CodexConversationModelService(
       this.codexGateway,
       this.runtimeCoordinator,
-      this.threadleafSettings,
+      this.windySettings,
     );
     this.pageReferences = new PageReferenceService(() => (
       this.app.vault.getFiles().map(file => ({
@@ -85,8 +85,8 @@ export default class ThreadleafPlugin extends Plugin {
     ));
 
     this.registerView(
-      VIEW_TYPE_THREADLEAF,
-      leaf => new ThreadleafView(
+      VIEW_TYPE_WINDY,
+      leaf => new WindyView(
         leaf,
         this.requireRouter(),
         this.requirePageConversations(),
@@ -120,7 +120,7 @@ export default class ThreadleafPlugin extends Plugin {
     });
     const updateFloatingVisibility = (): void => {
       const surfaces = this.app.workspace
-        .getLeavesOfType(VIEW_TYPE_THREADLEAF)
+        .getLeavesOfType(VIEW_TYPE_WINDY)
         .map(leaf => {
           const sidedock = leaf.view.containerEl.closest<HTMLElement>(
             '.workspace-split.mod-left-split, .workspace-split.mod-right-split',
@@ -186,8 +186,8 @@ export default class ThreadleafPlugin extends Plugin {
     this.register(() => this.floatingButton?.unmount());
 
     this.addRibbonIcon(
-      THREADLEAF_NAV_ICON,
-      'Open Threadleaf for the current page',
+      WINDY_NAV_ICON,
+      'Open Windy for the current page',
       () => {
         void this.openAgent();
       },
@@ -202,44 +202,44 @@ export default class ThreadleafPlugin extends Plugin {
   }
 
   onunload(): void {
-    this.app.workspace.detachLeavesOfType(VIEW_TYPE_THREADLEAF);
+    this.app.workspace.detachLeavesOfType(VIEW_TYPE_WINDY);
   }
 
   private async openAgent(): Promise<void> {
-    const existing = this.app.workspace.getLeavesOfType(VIEW_TYPE_THREADLEAF)[0];
+    const existing = this.app.workspace.getLeavesOfType(VIEW_TYPE_WINDY)[0];
     const leaf = existing ?? this.app.workspace.getRightLeaf(false);
     if (!leaf) {
       return;
     }
 
     await leaf.setViewState({
-      type: VIEW_TYPE_THREADLEAF,
+      type: VIEW_TYPE_WINDY,
       active: true,
     });
     this.app.workspace.revealLeaf(leaf);
     this.floatingButton?.setVisible(false);
-    if (leaf.view instanceof ThreadleafView) {
+    if (leaf.view instanceof WindyView) {
       leaf.view.focusComposer();
     }
   }
 
   private requireRouter(): PageConversationRouter {
     if (!this.router) {
-      throw new Error('Threadleaf page conversation router is not initialized.');
+      throw new Error('Windy page conversation router is not initialized.');
     }
     return this.router;
   }
 
   private requireConversations(): ConversationRepository {
     if (!this.conversations) {
-      throw new Error('Threadleaf conversation repository is not initialized.');
+      throw new Error('Windy conversation repository is not initialized.');
     }
     return this.conversations;
   }
 
   private requireRuntimeCoordinator(): RuntimeCoordinator {
     if (!this.runtimeCoordinator) {
-      throw new Error('Threadleaf runtime coordinator is not initialized.');
+      throw new Error('Windy runtime coordinator is not initialized.');
     }
     return this.runtimeCoordinator;
   }
@@ -267,7 +267,7 @@ export default class ThreadleafPlugin extends Plugin {
 
   private requireCodexGateway(): CodexAppServerGateway {
     if (!this.codexGateway) {
-      throw new Error('Threadleaf Codex gateway is not initialized.');
+      throw new Error('Windy Codex gateway is not initialized.');
     }
     return this.codexGateway;
   }

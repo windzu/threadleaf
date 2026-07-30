@@ -51,7 +51,7 @@ export interface McpConfigFile {
 
 /** Extended config file with app-owned server metadata. */
 export interface ManagedMcpConfigFile extends McpConfigFile {
-  _threadleaf?: {
+  _windy?: {
     /** Per-server UI/runtime settings. */
     servers: Record<
       string,

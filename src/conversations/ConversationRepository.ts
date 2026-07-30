@@ -71,7 +71,7 @@ export class ConversationRepository implements ConversationStore {
 
   private getConversationPath(conversationId: string): string | null {
     return /^[a-zA-Z0-9_-]+$/.test(conversationId)
-      ? `.threadleaf/conversations/${conversationId}.json`
+      ? `.windy/conversations/${conversationId}.json`
       : null;
   }
 }

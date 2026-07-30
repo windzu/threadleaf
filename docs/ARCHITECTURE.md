@@ -1,6 +1,6 @@
-# Threadleaf architecture
+# Windy architecture
 
-Threadleaf separates page navigation, persisted conversations, task
+Windy separates page navigation, persisted conversations, task
 coordination, and provider execution so page changes never own or cancel agent
 work.
 
@@ -8,7 +8,7 @@ work.
 
 ```mermaid
 flowchart TB
-    Plugin["Threadleaf plugin"] --> Gateway["CodexAppServerGateway"]
+    Plugin["Windy plugin"] --> Gateway["CodexAppServerGateway"]
     Plugin --> Coordinator["RuntimeCoordinator"]
     Coordinator --> TaskA["ConversationTaskController A"]
     Coordinator --> TaskB["ConversationTaskController B"]
@@ -58,7 +58,7 @@ runtime accepts only notifications matching its current `threadId` and
 ## Storage invariants
 
 - Conversation files use a versioned envelope under
-  `.threadleaf/conversations/<id>.json`. Legacy unversioned Threadleaf files are
+  `.windy/conversations/<id>.json`. Legacy unversioned conversation files are
   read without modification, version 1 envelopes remain readable, and both are
   upgraded to the current schema on their next normal save.
 - Existing JSON files are updated through Obsidian's atomic `process` API. New
@@ -71,7 +71,7 @@ runtime accepts only notifications matching its current `threadId` and
   states become `interrupted`; partial assistant output remains visible and the
   lost live turn is never presented as still running.
 - An explicit model selection belongs to the conversation. An absent
-  `selectedModel` means `Auto` and resolves through the current Threadleaf
+  `selectedModel` means `Auto` and resolves through the current Windy
   default when a turn starts.
 - Additional page references belong to the user turn that attached them. Their
   Vault paths are persisted with the message and encoded as `<context_files>`;

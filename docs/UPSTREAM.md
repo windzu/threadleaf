@@ -1,6 +1,6 @@
 # Upstream source boundary
 
-Threadleaf is an independent Obsidian plugin. It does not depend on Claudian,
+Windy is an independent Obsidian plugin. It does not depend on Claudian,
 embed Claudian as a module, reuse Claudian storage, or support Claudian data
 migration.
 
@@ -16,7 +16,7 @@ Selected implementation code was copied once from:
 The initial import selected 67 TypeScript files from the dependency closure
 rooted at Claudian's provider-neutral `ChatRuntime`, shared chat types, and
 `CodexChatRuntime`. Four registry/projection files were subsequently removed
-after Threadleaf replaced their global multi-provider coupling with its own
+after Windy replaced their global multi-provider coupling with its own
 direct Codex settings boundary.
 
 The imported implementation covers:
@@ -39,6 +39,6 @@ The imported implementation covers:
 - documentation, release scripts, and Git history;
 - Claude, OpenCode, Pi, and Grok implementations.
 
-Threadleaf may adapt additional provider implementations later, but each one
-will be selected and integrated into Threadleaf's own architecture rather than
+Windy may adapt additional provider implementations later, but each one
+will be selected and integrated into Windy's own architecture rather than
 bringing in the Claudian application.

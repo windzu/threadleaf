@@ -13,12 +13,12 @@ import path from 'node:path';
 import process from 'node:process';
 import { spawnSync } from 'node:child_process';
 
-const vaultPath = process.argv[2] || process.env.THREADLEAF_VAULT;
+const vaultPath = process.argv[2] || process.env.WINDY_VAULT;
 if (!vaultPath) {
   throw new Error('Pass the Obsidian vault path as the first argument.');
 }
 
-const pluginPath = path.join(vaultPath, '.obsidian', 'plugins', 'threadleaf');
+const pluginPath = path.join(vaultPath, '.obsidian', 'plugins', 'windy');
 mkdirSync(pluginPath, { recursive: true });
 
 for (const filename of ['main.js', 'manifest.json', 'styles.css']) {
@@ -32,7 +32,7 @@ writeFileSync(path.join(pluginPath, '.hotreload'), '');
 
 const obsidianIconPath = '/Applications/Obsidian.app/Contents/Resources/icon.icns';
 if (process.platform === 'darwin' && existsSync(obsidianIconPath)) {
-  const temporaryDirectory = mkdtempSync(path.join(tmpdir(), 'threadleaf-deploy-'));
+  const temporaryDirectory = mkdtempSync(path.join(tmpdir(), 'windy-deploy-'));
   const pngPath = path.join(temporaryDirectory, 'obsidian-icon.png');
   try {
     const conversion = spawnSync(
@@ -46,8 +46,8 @@ if (process.platform === 'darwin' && existsSync(obsidianIconPath)) {
         path.join(pluginPath, 'styles.css'),
         `
 
-/* Personal local build only: Obsidian app icon is not distributed by Threadleaf. */
-.threadleaf-floating-button {
+/* Personal local build only: Obsidian app icon is not distributed by Windy. */
+.windy-floating-button {
   background-color: transparent;
   background-image: url("data:image/png;base64,${iconData}");
   background-position: center;
@@ -57,7 +57,7 @@ if (process.platform === 'darwin' && existsSync(obsidianIconPath)) {
   box-shadow: 0 8px 24px rgb(0 0 0 / 28%);
 }
 
-.threadleaf-floating-button svg {
+.windy-floating-button svg {
   display: none;
 }
 `,
@@ -68,4 +68,4 @@ if (process.platform === 'darwin' && existsSync(obsidianIconPath)) {
   }
 }
 
-process.stdout.write(`Deployed Threadleaf to ${pluginPath}\n`);
+process.stdout.write(`Deployed Windy to ${pluginPath}\n`);

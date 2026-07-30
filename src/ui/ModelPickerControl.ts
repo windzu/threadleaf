@@ -14,16 +14,16 @@ export function renderModelPickerControl(
   options: ModelPickerControlOptions,
 ): void {
   const trigger = container.createEl('button', {
-    cls: 'threadleaf-view__model-trigger clickable-icon',
+    cls: 'windy-view__model-trigger clickable-icon',
     attr: {
       type: 'button',
       'aria-label': 'Choose model',
     },
   });
-  const icon = trigger.createSpan('threadleaf-view__model-icon');
+  const icon = trigger.createSpan('windy-view__model-icon');
   setIcon(icon, 'bot');
   const label = trigger.createSpan({
-    cls: 'threadleaf-view__model-label',
+    cls: 'windy-view__model-label',
     text: options.models.getSelectionLabel(options.selectedModel),
   });
   trigger.disabled = options.disabled;

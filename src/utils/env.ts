@@ -7,7 +7,7 @@ import { parsePathEntries, resolveNvmDefaultBin } from './path';
 const isWindows = process.platform === 'win32';
 const PATH_SEPARATOR = isWindows ? ';' : ':';
 const NODE_EXECUTABLE = isWindows ? 'node.exe' : 'node';
-const DEVICE_SETTINGS_STORAGE_KEY = 'threadleaf.deviceSettingsKey';
+const DEVICE_SETTINGS_STORAGE_KEY = 'windy.deviceSettingsKey';
 let cachedDeviceSettingsKey: string | null = null;
 
 function getHomeDir(): string {

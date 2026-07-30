@@ -23,7 +23,7 @@ function conversation(id: string): Conversation {
 
 describe('ConversationRepository', () => {
   it('reads legacy documents and upgrades them on the next normal save', async () => {
-    const path = '.threadleaf/conversations/legacy.json';
+    const path = '.windy/conversations/legacy.json';
     const adapter = new MemoryJsonFileAdapter({
       [path]: JSON.stringify(conversation('legacy')),
     });
@@ -44,7 +44,7 @@ describe('ConversationRepository', () => {
   });
 
   it('reads version 1 envelopes and upgrades them to the current version', async () => {
-    const path = '.threadleaf/conversations/v1.json';
+    const path = '.windy/conversations/v1.json';
     const adapter = new MemoryJsonFileAdapter({
       [path]: JSON.stringify({
         version: 1,
@@ -64,8 +64,8 @@ describe('ConversationRepository', () => {
   });
 
   it('rejects unsupported versions and mismatched ids without modifying data', async () => {
-    const versionedPath = '.threadleaf/conversations/future.json';
-    const mismatchedPath = '.threadleaf/conversations/expected.json';
+    const versionedPath = '.windy/conversations/future.json';
+    const mismatchedPath = '.windy/conversations/expected.json';
     const adapter = new MemoryJsonFileAdapter({
       [versionedPath]: JSON.stringify({
         version: 99,
@@ -90,7 +90,7 @@ describe('ConversationRepository', () => {
   });
 
   it('rejects malformed persisted turn state', async () => {
-    const path = '.threadleaf/conversations/malformed.json';
+    const path = '.windy/conversations/malformed.json';
     const malformed = conversation('malformed');
     malformed.activeTurn = {
       status: 'running',

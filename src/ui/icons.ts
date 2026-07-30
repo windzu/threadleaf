@@ -1,1 +1,1 @@
-export const THREADLEAF_NAV_ICON = 'gem';
+export const WINDY_NAV_ICON = 'gem';

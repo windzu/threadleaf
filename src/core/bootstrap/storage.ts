@@ -5,14 +5,14 @@ import type { VaultFileAdapter } from '../storage/VaultFileAdapter';
  * Minimal shared app storage contract.
  *
  * This interface covers only the storage concerns that are shared across
- * all providers: Threadleaf settings and page conversation metadata.
+ * all providers: Windy settings and page conversation metadata.
  *
  * Provider-specific storage surfaces (CC settings, slash commands, skills,
  * agents, MCP config) live behind provider-owned modules.
  */
 export interface SharedAppStorage {
-  initialize(): Promise<{ threadleaf: Record<string, unknown> }>;
-  saveThreadleafSettings(settings: Record<string, unknown>): Promise<void>;
+  initialize(): Promise<{ windy: Record<string, unknown> }>;
+  saveWindySettings(settings: Record<string, unknown>): Promise<void>;
   sessions: AppSessionStorage;
   getAdapter(): VaultFileAdapter;
 }

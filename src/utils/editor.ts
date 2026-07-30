@@ -1,5 +1,5 @@
 /**
- * Threadleaf - Editor Context Utilities
+ * Windy - Editor Context Utilities
  *
  * Editor cursor and selection context for inline editing.
  */

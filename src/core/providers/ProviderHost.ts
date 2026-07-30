@@ -1,14 +1,14 @@
 import type { App } from 'obsidian';
 
-import type { ThreadleafSettings } from '../types';
+import type { WindySettings } from '../types';
 import type { ProviderCliResolutionContext, ProviderId } from './types';
 
 /**
- * Minimal application capabilities consumed by Threadleaf provider runtimes.
+ * Minimal application capabilities consumed by Windy provider runtimes.
  */
 export interface ProviderHost {
   readonly app: App;
-  readonly settings: ThreadleafSettings;
+  readonly settings: WindySettings;
   readonly manifest?: { version?: string };
 
   getActiveEnvironmentVariables(providerId: ProviderId): string;
