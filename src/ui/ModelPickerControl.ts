@@ -21,7 +21,7 @@ export function renderModelPickerControl(
     },
   });
   const icon = trigger.createSpan('windy-view__model-icon');
-  setIcon(icon, 'bot');
+  setIcon(icon, 'sparkles');
   const label = trigger.createSpan({
     cls: 'windy-view__model-label',
     text: options.models.getSelectionLabel(options.selectedModel),

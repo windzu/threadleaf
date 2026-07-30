@@ -1,1 +1,16 @@
-export const WINDY_NAV_ICON = 'gem';
+export const WINDY_NAV_ICON = 'windy-mark';
+
+export const WINDY_ICON_SVG = [
+  '<g transform="scale(4.1666667)"><path',
+  ' d="M2.25 12.15C3.45 12.15 4.15 10.2 5.3 9.1',
+  'C5.7 8.72 6.02 8.9 5.9 9.55L5.25 13.15',
+  'C5.03 14.35 5.55 15.05 6.35 14.55L10.05 9.45',
+  'C10.5 8.85 10.92 8.98 10.78 9.7L10.12 13.2',
+  'C9.9 14.4 10.48 15.02 11.28 14.48L14.95 9.35',
+  'C15.4 8.72 15.83 8.92 15.68 9.65L15.02 13.18',
+  'C14.8 14.38 15.38 15.04 16.2 14.45L19.38 9.98',
+  'C19.83 9.35 20.2 9.48 20.42 10.08',
+  'C20.78 11.08 21.22 11.95 22.2 11.95"',
+  ' fill="none" stroke="currentColor" stroke-width="2.15"',
+  ' stroke-linecap="round" stroke-linejoin="round"/></g>',
+].join('');

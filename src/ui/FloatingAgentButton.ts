@@ -1,6 +1,7 @@
-import { App, getIconIds, setIcon, setTooltip } from 'obsidian';
+import { App, setIcon, setTooltip } from 'obsidian';
 
 import type { RuntimeActivitySummary } from '../runtime/RuntimeCoordinator';
+import { WINDY_NAV_ICON } from './icons';
 
 const IDLE_ACTIVITY: RuntimeActivitySummary = {
   status: 'idle',
@@ -39,14 +40,8 @@ export class FloatingAgentButton {
         type: 'button',
       },
     });
-    const availableIcons = new Set(getIconIds());
-    const iconId = availableIcons.has('logo-crystal')
-      ? 'logo-crystal'
-      : availableIcons.has('obsidian')
-        ? 'obsidian'
-        : 'gem';
-    button.dataset.windyIcon = iconId;
-    setIcon(button, iconId);
+    button.dataset.windyIcon = WINDY_NAV_ICON;
+    setIcon(button, WINDY_NAV_ICON);
     button.addEventListener('click', this.onClick);
     this.element = button;
     this.renderVisibility();

@@ -1,4 +1,4 @@
-import { Plugin } from 'obsidian';
+import { addIcon, Plugin } from 'obsidian';
 
 import {
   mergeWindySettings,
@@ -24,7 +24,7 @@ import {
   shouldShowFloatingAgentButton,
 } from './ui/AgentEntryVisibility';
 import { FloatingAgentButton } from './ui/FloatingAgentButton';
-import { WINDY_NAV_ICON } from './ui/icons';
+import { WINDY_ICON_SVG, WINDY_NAV_ICON } from './ui/icons';
 import { WindyView, VIEW_TYPE_WINDY } from './ui/WindyView';
 
 export default class WindyPlugin extends Plugin {
@@ -41,6 +41,7 @@ export default class WindyPlugin extends Plugin {
   private windySettings: WindySettings | null = null;
 
   async onload(): Promise<void> {
+    addIcon(WINDY_NAV_ICON, WINDY_ICON_SVG);
     this.windySettings = mergeWindySettings(await this.loadData());
     this.conversations = new ConversationRepository(this.app.vault.adapter);
     const providerHost = new WindyProviderHost(

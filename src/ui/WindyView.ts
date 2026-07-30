@@ -1,4 +1,9 @@
-import { ItemView, Notice, WorkspaceLeaf } from 'obsidian';
+import {
+  ItemView,
+  Notice,
+  setIcon,
+  WorkspaceLeaf,
+} from 'obsidian';
 
 import type { ConversationMeta } from '../core/types';
 import type {
@@ -16,6 +21,7 @@ import type {
   RuntimeCoordinator,
 } from '../runtime/RuntimeCoordinator';
 import { renderConversationHistoryControl } from './ConversationHistoryControl';
+import { EMPTY_STATE_ACTIONS } from './emptyStateActions';
 import { renderWindyComposer } from './WindyComposer';
 import { WINDY_NAV_ICON } from './icons';
 import { MessageListRenderer } from './MessageListRenderer';
@@ -139,46 +145,38 @@ export class WindyView extends ItemView {
     this.contentEl.addClass('windy-view');
 
     const header = this.contentEl.createDiv('windy-view__header');
-    header.createEl('div', {
-      cls: 'windy-view__eyebrow',
-      text: 'PAGE AGENT',
-    });
-    header.createEl('h2', {
-      text: page?.basename ?? 'No active page',
-    });
-    header.createEl('p', {
-      cls: 'windy-view__context',
-      text: page
-        ? `Context: ${page.path}`
-        : 'Open a Markdown or Bases page to start a page-native conversation.',
-    });
 
     if (!page) {
+      const topbar = header.createDiv('windy-view__conversation-bar');
+      const brand = topbar.createDiv('windy-view__brand');
+      const brandIcon = brand.createSpan('windy-view__brand-icon');
+      setIcon(brandIcon, WINDY_NAV_ICON);
+      brand.createSpan({ text: 'Windy' });
+      const messages = this.contentEl.createDiv('windy-view__messages');
+      const empty = messages.createDiv('windy-view__empty');
+      empty.createEl('h2', { text: 'Open a page to begin' });
+      empty.createEl('p', {
+        text: 'Windy follows the active Markdown or Bases page.',
+      });
       return;
     }
 
-    if (history.length > 0) {
-      renderConversationHistoryControl(this.contentEl, {
-        history,
-        activeConversationId: route.activeConversationId,
-        isDraft: this.draftPagePath === page.path || !snapshot?.conversation,
-        onStartDraft: () => this.startDraft(),
-        onSelect: async conversationId => {
-          this.draftPagePath = null;
-          await this.pageConversations.selectConversation(
-            page.path,
-            conversationId,
-          );
-        },
-      });
-    }
-
+    renderConversationHistoryControl(header, {
+      history,
+      activeConversationId: route.activeConversationId,
+      isDraft: this.draftPagePath === page.path || !snapshot?.conversation,
+      onStartDraft: () => this.startDraft(),
+      onSelect: async conversationId => {
+        this.draftPagePath = null;
+        await this.pageConversations.selectConversation(
+          page.path,
+          conversationId,
+        );
+      },
+    });
     const messages = this.contentEl.createDiv('windy-view__messages');
     if (!snapshot?.conversation) {
-      messages.createDiv({
-        cls: 'windy-view__empty',
-        text: `Ask anything about ${page.basename}.`,
-      });
+      this.renderEmptyState(messages, page.basename);
     }
     const renderer = new MessageListRenderer(this.app);
     this.messageRenderer = renderer;
@@ -250,6 +248,29 @@ export class WindyView extends ItemView {
         }
       },
     });
+  }
+
+  private renderEmptyState(container: HTMLElement, pageName: string): void {
+    const empty = container.createDiv('windy-view__empty');
+    const mark = empty.createDiv('windy-view__empty-mark');
+    setIcon(mark, WINDY_NAV_ICON);
+    empty.createEl('h2', { text: 'What should we work on?' });
+    empty.createEl('p', {
+      text: `${pageName} is already in context.`,
+    });
+    const actions = empty.createDiv('windy-view__starter-actions');
+    for (const action of EMPTY_STATE_ACTIONS) {
+      const button = actions.createEl('button', {
+        cls: 'windy-view__starter-action',
+        attr: { type: 'button' },
+      });
+      const icon = button.createSpan('windy-view__starter-icon');
+      setIcon(icon, action.icon);
+      button.createSpan({ text: action.label });
+      button.addEventListener('click', () => {
+        void this.send(action.prompt);
+      });
+    }
   }
 
   private renderApproval(snapshot: ConversationRuntimeSnapshot): void {
