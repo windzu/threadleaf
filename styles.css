@@ -131,13 +131,41 @@
   gap: var(--size-4-2);
 }
 
-.threadleaf-view__conversation-select {
+.threadleaf-view__conversation-trigger {
+  align-items: center;
+  display: flex;
+  gap: var(--size-4-2);
   min-width: 0;
+  text-align: left;
   width: 100%;
 }
 
-.threadleaf-view__new-conversation {
+.threadleaf-view__conversation-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.threadleaf-view__conversation-chevron {
+  color: var(--text-muted);
+  display: flex;
+}
+
+.threadleaf-view__conversation-chevron svg {
+  height: var(--icon-xs);
+  width: var(--icon-xs);
+}
+
+.threadleaf-view__conversation-count {
+  background: var(--background-modifier-hover);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
   flex: 0 0 auto;
+  font-size: var(--font-ui-smaller);
+  min-width: 1.75em;
+  padding: 2px 6px;
+  text-align: center;
 }
 
 .threadleaf-view__empty {

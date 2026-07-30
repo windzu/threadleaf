@@ -83,9 +83,17 @@ export class PageConversationRouter {
       throw new Error('Cannot select a conversation without an active page.');
     }
 
-    const record = await this.index.setActive(page.path, conversationId);
-    if (this.route.page?.path === page.path) {
-      this.publish(page, record);
+    await this.selectConversationForPage(page.path, conversationId);
+  }
+
+  async selectConversationForPage(
+    pagePath: string,
+    conversationId: string,
+  ): Promise<void> {
+    const record = await this.index.setActive(pagePath, conversationId);
+    const activePage = this.route.page;
+    if (activePage?.path === pagePath) {
+      this.publish(activePage, record);
     }
   }
 

@@ -98,4 +98,26 @@ describe('PageConversationRouter', () => {
     pageContext.open('A.md');
     assert.equal(router.getRoute().activeConversationId, 'a-lazy');
   });
+
+  it('selects against the originating page when navigation changes', async () => {
+    const index = new PageAgentIndex(
+      new MemoryStore<PageAgentIndexDocument>(),
+    );
+    await index.initialize();
+    const pageContext = new FakePageContext();
+    const router = new PageConversationRouter(pageContext, index);
+    router.start();
+
+    pageContext.open('A.md');
+    await router.associateConversation('a-1');
+    await router.associateConversation('a-2');
+    pageContext.open('B.md');
+    await router.associateConversation('b-1');
+
+    await router.selectConversationForPage('A.md', 'a-1');
+    assert.equal(router.getRoute().activeConversationId, 'b-1');
+
+    pageContext.open('A.md');
+    assert.equal(router.getRoute().activeConversationId, 'a-1');
+  });
 });
