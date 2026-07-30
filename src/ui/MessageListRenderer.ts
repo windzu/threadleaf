@@ -9,7 +9,10 @@ import type {
   ChatMessage,
   ToolCallInfo,
 } from '../core/types';
-import { isInlinePageReference } from './pageReferenceMentions';
+import {
+  isInlinePageReference,
+  splitPageMentionText,
+} from './pageReferenceMentions';
 import type { ConversationTaskStatus } from '../runtime/RuntimeCoordinator';
 import {
   formatToolName,
@@ -72,7 +75,15 @@ export class MessageListRenderer extends Component {
         );
       } else {
         contentElement.addClass('windy-message__content--plain');
-        contentElement.setText(content);
+        if (message.role === 'user') {
+          this.renderPageMentions(
+            contentElement,
+            content,
+            message.referencedPagePaths ?? [],
+          );
+        } else {
+          contentElement.setText(content);
+        }
       }
       if (message.role !== 'assistant') {
         this.renderThinking(messageElement, message);
@@ -120,6 +131,34 @@ export class MessageListRenderer extends Component {
       references.createSpan({
         cls: 'windy-message__reference',
         text: path,
+      });
+    }
+  }
+
+  private renderPageMentions(
+    container: HTMLElement,
+    content: string,
+    paths: string[],
+  ): void {
+    for (const segment of splitPageMentionText(content, paths)) {
+      if (segment.type === 'text') {
+        container.appendText(segment.text);
+        continue;
+      }
+      const mention = container.createSpan({
+        cls: 'windy-message__inline-reference',
+        attr: {
+          'aria-label': `Page: ${segment.path}`,
+          title: segment.path,
+        },
+      });
+      const icon = mention.createSpan(
+        'windy-message__inline-reference-icon',
+      );
+      setIcon(icon, segment.path.endsWith('.base') ? 'database' : 'file-text');
+      mention.createSpan({
+        cls: 'windy-message__inline-reference-title',
+        text: pageBasename(segment.path),
       });
     }
   }
@@ -208,4 +247,9 @@ export class MessageListRenderer extends Component {
       text: formatToolPayload(value),
     });
   }
+}
+
+function pageBasename(path: string): string {
+  const filename = path.split('/').at(-1) ?? path;
+  return filename.replace(/\.(?:md|base)$/i, '');
 }

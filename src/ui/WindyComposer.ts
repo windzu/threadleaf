@@ -76,7 +76,7 @@ export function renderWindyComposer(
   setIcon(sendButton, isRunning ? 'square' : 'arrow-up');
   setTooltip(sendButton, isRunning ? 'Stop response' : 'Send message');
   const updateSendState = (): void => {
-    sendButton.disabled = !isRunning && !referenceComposer.input.value.trim();
+    sendButton.disabled = !isRunning && !referenceComposer.getText().trim();
   };
   updateSendState();
   referenceComposer.input.addEventListener('input', updateSendState);
@@ -84,7 +84,7 @@ export function renderWindyComposer(
     if (isRunning) {
       options.onStop();
     } else {
-      options.onSubmit(referenceComposer.input.value);
+      options.onSubmit(referenceComposer.getText());
     }
   });
 }
