@@ -114,6 +114,60 @@ describe('ConversationRepository', () => {
     );
   });
 
+  it('repairs duplicate tool events while preserving a terminal result', async () => {
+    const path = '.windy/conversations/duplicate-tools.json';
+    const stored = conversation('duplicate-tools');
+    stored.messages = [{
+      id: 'assistant-1',
+      role: 'assistant',
+      content: 'Done',
+      timestamp: 100,
+      toolCalls: [
+        {
+          id: 'patch-1',
+          name: 'apply_patch',
+          input: { patch: 'first' },
+          status: 'completed',
+          result: 'updated A.md',
+        },
+        {
+          id: 'patch-1',
+          name: 'apply_patch',
+          input: { patch: 'latest' },
+          status: 'running',
+        },
+      ],
+      contentBlocks: [
+        { type: 'tool_use', toolId: 'patch-1' },
+        { type: 'tool_use', toolId: 'patch-1' },
+        { type: 'text', content: 'Done' },
+      ],
+    }];
+    const adapter = new MemoryJsonFileAdapter({
+      [path]: JSON.stringify({
+        version: CONVERSATION_DOCUMENT_VERSION,
+        conversation: stored,
+      }),
+    });
+    const repository = new ConversationRepository(adapter);
+
+    const loaded = await repository.load('duplicate-tools');
+    const assistant = loaded?.messages[0];
+
+    assert.deepEqual(assistant?.toolCalls, [{
+      id: 'patch-1',
+      name: 'apply_patch',
+      input: { patch: 'latest' },
+      status: 'completed',
+      result: 'updated A.md',
+      providerPayload: undefined,
+    }]);
+    assert.deepEqual(assistant?.contentBlocks, [
+      { type: 'tool_use', toolId: 'patch-1' },
+      { type: 'text', content: 'Done' },
+    ]);
+  });
+
   it('treats unsafe ids as unavailable instead of resolving outside storage', async () => {
     const repository = new ConversationRepository(
       new MemoryJsonFileAdapter(),

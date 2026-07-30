@@ -355,14 +355,29 @@ export class ConversationTaskController {
       return;
     }
     if (chunk.type === 'tool_use') {
-      assistantMessage.toolCalls?.push({
-        id: chunk.id,
-        name: chunk.name,
-        input: chunk.input,
-        status: 'running',
-        providerPayload: chunk.providerPayload,
-      });
-      assistantMessage.contentBlocks?.push({ type: 'tool_use', toolId: chunk.id });
+      const existing = assistantMessage.toolCalls?.find(call => call.id === chunk.id);
+      if (existing) {
+        existing.name = chunk.name;
+        existing.input = chunk.input;
+        if (chunk.providerPayload) {
+          existing.providerPayload = chunk.providerPayload;
+        }
+      } else {
+        assistantMessage.toolCalls?.push({
+          id: chunk.id,
+          name: chunk.name,
+          input: chunk.input,
+          status: 'running',
+          providerPayload: chunk.providerPayload,
+        });
+      }
+      if (
+        !assistantMessage.contentBlocks?.some(
+          block => block.type === 'tool_use' && block.toolId === chunk.id,
+        )
+      ) {
+        assistantMessage.contentBlocks?.push({ type: 'tool_use', toolId: chunk.id });
+      }
       return;
     }
     if (chunk.type === 'tool_result' || chunk.type === 'tool_output') {
