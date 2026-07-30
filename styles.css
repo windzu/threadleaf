@@ -243,7 +243,23 @@
 
 .threadleaf-message__content {
   overflow-wrap: anywhere;
+}
+
+.threadleaf-message__content--plain {
   white-space: pre-wrap;
+}
+
+.threadleaf-message__content.markdown-rendered > :first-child {
+  margin-top: 0;
+}
+
+.threadleaf-message__content.markdown-rendered > :last-child {
+  margin-bottom: 0;
+}
+
+.threadleaf-message__content.markdown-rendered pre {
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .threadleaf-message__tools {
@@ -258,9 +274,122 @@
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-s);
   color: var(--text-muted);
-  font-family: var(--font-monospace);
   font-size: var(--font-ui-smaller);
-  padding: var(--size-4-1) var(--size-4-2);
+  overflow: hidden;
+}
+
+.threadleaf-tool--running {
+  border-color: var(--color-orange);
+}
+
+.threadleaf-tool--error {
+  border-color: var(--color-red);
+}
+
+.threadleaf-tool--blocked {
+  border-color: var(--text-warning);
+}
+
+.threadleaf-tool__summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: var(--size-4-2);
+  list-style: none;
+  padding: var(--size-4-2);
+}
+
+.threadleaf-tool__summary::-webkit-details-marker {
+  display: none;
+}
+
+.threadleaf-tool__icon {
+  display: flex;
+  flex: 0 0 auto;
+}
+
+.threadleaf-tool__icon svg {
+  height: var(--icon-xs);
+  width: var(--icon-xs);
+}
+
+.threadleaf-tool--running .threadleaf-tool__icon {
+  animation: threadleaf-spin 1.2s linear infinite;
+  color: var(--color-orange);
+}
+
+.threadleaf-tool--completed .threadleaf-tool__icon {
+  color: var(--color-green);
+}
+
+.threadleaf-tool--error .threadleaf-tool__icon {
+  color: var(--color-red);
+}
+
+.threadleaf-tool__name {
+  color: var(--text-normal);
+  flex: 1;
+  font-weight: var(--font-medium);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.threadleaf-tool__status {
+  flex: 0 0 auto;
+}
+
+.threadleaf-tool__body {
+  border-top: 1px solid var(--background-modifier-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+  padding: var(--size-4-2);
+}
+
+.threadleaf-tool__label {
+  font-weight: var(--font-semibold);
+  margin-bottom: 3px;
+}
+
+.threadleaf-tool__payload {
+  background: var(--background-primary);
+  border-radius: var(--radius-s);
+  font-family: var(--font-monospace);
+  margin: 0;
+  max-height: 260px;
+  overflow: auto;
+  padding: var(--size-4-2);
+  white-space: pre-wrap;
+}
+
+.threadleaf-tool__empty {
+  color: var(--text-faint);
+}
+
+.threadleaf-thinking {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  margin-top: var(--size-4-2);
+}
+
+.threadleaf-thinking summary {
+  cursor: pointer;
+}
+
+.threadleaf-thinking pre {
+  font-family: var(--font-text);
+  margin-bottom: 0;
+  max-height: 240px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+@keyframes threadleaf-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .threadleaf-view__approval {

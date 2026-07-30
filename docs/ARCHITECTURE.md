@@ -98,6 +98,9 @@ runtime accepts only notifications matching its current `threadId` and
   recovery.
 - `src/providers/codex/runtime`: Codex protocol, shared process gateway, and
   per-conversation runtime state.
-- `src/ui`: Obsidian presentation and user interaction.
+- `src/ui/MessageListRenderer`: lifecycle-scoped Markdown, reasoning, and tool
+  presentation. Completed assistant messages use Obsidian's native Markdown
+  renderer; live output remains plain text until the turn stops.
+- `src/ui`: remaining Obsidian presentation and user interaction.
 
 Future storage and UI work should preserve these ownership boundaries.
