@@ -3,6 +3,7 @@ import { addIcon, Plugin } from 'obsidian';
 import {
   mergeWindySettings,
 } from './app/settings';
+import { PermissionModeController } from './app/PermissionModeController';
 import { WindyProviderHost } from './app/WindyProviderHost';
 import type { WindySettings } from './core/types';
 import { ConversationRepository } from './conversations/ConversationRepository';
@@ -39,10 +40,15 @@ export default class WindyPlugin extends Plugin {
   private runtimeCoordinator: RuntimeCoordinator | null = null;
   private codexGateway: CodexAppServerGateway | null = null;
   private windySettings: WindySettings | null = null;
+  private permissionModes: PermissionModeController | null = null;
 
   async onload(): Promise<void> {
     addIcon(WINDY_NAV_ICON, WINDY_ICON_SVG);
     this.windySettings = mergeWindySettings(await this.loadData());
+    this.permissionModes = new PermissionModeController(
+      this.windySettings,
+      settings => this.saveData(settings),
+    );
     this.conversations = new ConversationRepository(this.app.vault.adapter);
     const providerHost = new WindyProviderHost(
       this.app,
@@ -94,6 +100,7 @@ export default class WindyPlugin extends Plugin {
         this.requireRuntimeCoordinator(),
         this.requireConversationModels(),
         this.requirePageReferences(),
+        this.requirePermissionModes(),
       ),
     );
 
@@ -271,5 +278,12 @@ export default class WindyPlugin extends Plugin {
       throw new Error('Windy Codex gateway is not initialized.');
     }
     return this.codexGateway;
+  }
+
+  private requirePermissionModes(): PermissionModeController {
+    if (!this.permissionModes) {
+      throw new Error('Permission mode controller is not initialized.');
+    }
+    return this.permissionModes;
   }
 }

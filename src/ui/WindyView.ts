@@ -10,6 +10,7 @@ import type {
   AskUserQuestionItem,
   ConversationMeta,
 } from '../core/types';
+import type { PermissionModeController } from '../app/PermissionModeController';
 import type {
   PageConversationRoute,
   PageConversationRouter,
@@ -52,6 +53,7 @@ export class WindyView extends ItemView {
     private readonly runtimeCoordinator: RuntimeCoordinator,
     private readonly conversationModels: ConversationModelService,
     private readonly pageReferences: PageReferenceService,
+    private readonly permissionModes: PermissionModeController,
   ) {
     super(leaf);
   }
@@ -232,6 +234,7 @@ export class WindyView extends ItemView {
         ? composerDraft.selectedModel
         : snapshot.conversation?.selectedModel,
       status,
+      permissionMode: this.permissionModes.getMode(),
       models: this.conversationModels,
       referenceService: this.pageReferences,
       onDraftChange: (text, references) => {
@@ -245,6 +248,9 @@ export class WindyView extends ItemView {
           return;
         }
         await this.conversationModels.select(snapshot.conversation.id, model);
+      },
+      onPermissionModeSelect: async mode => {
+        await this.permissionModes.setMode(mode);
       },
       onSubmit: text => {
         void this.send(text);
