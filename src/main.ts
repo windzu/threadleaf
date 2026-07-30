@@ -20,6 +20,9 @@ import { CodexAppServerGateway } from './providers/codex/runtime/CodexAppServerG
 import { CodexChatRuntime } from './providers/codex/runtime/CodexChatRuntime';
 import { RuntimeCoordinator } from './runtime/RuntimeCoordinator';
 import { JsonFileStore } from './storage/JsonFileStore';
+import {
+  shouldShowFloatingAgentButton,
+} from './ui/AgentEntryVisibility';
 import { FloatingAgentButton } from './ui/FloatingAgentButton';
 import { ThreadleafView, VIEW_TYPE_THREADLEAF } from './ui/ThreadleafView';
 
@@ -115,10 +118,20 @@ export default class ThreadleafPlugin extends Plugin {
       void this.openAgent();
     });
     const updateFloatingVisibility = (): void => {
-      const isAgentVisible = this.app.workspace
+      const surfaces = this.app.workspace
         .getLeavesOfType(VIEW_TYPE_THREADLEAF)
-        .some(leaf => leaf.view.containerEl.isShown());
-      this.floatingButton?.setVisible(!isAgentVisible);
+        .map(leaf => {
+          const sidedock = leaf.view.containerEl.closest<HTMLElement>(
+            '.workspace-split.mod-left-split, .workspace-split.mod-right-split',
+          );
+          return {
+            containerShown: leaf.view.containerEl.isShown(),
+            sidedockCollapsed: sidedock?.hasClass('is-sidedock-collapsed') ?? false,
+          };
+        });
+      this.floatingButton?.setVisible(
+        shouldShowFloatingAgentButton(surfaces),
+      );
     };
     const updateFloatingActivity = (): void => {
       const activeConversationId = this.router?.getRoute().activeConversationId ?? null;
@@ -132,18 +145,52 @@ export default class ThreadleafPlugin extends Plugin {
     this.register(this.router.onChange(updateFloatingActivity));
     this.register(this.runtimeCoordinator.onChange(updateFloatingActivity));
     updateFloatingActivity();
-    this.app.workspace.onLayoutReady(() => {
+
+    let observedSidedock: HTMLElement | null = null;
+    const sidedockObserver = new MutationObserver(updateFloatingVisibility);
+    const observeRightSidedock = (): void => {
+      const rightSidedock = this.app.workspace.containerEl
+        .querySelector<HTMLElement>('.workspace-split.mod-right-split');
+      if (rightSidedock === observedSidedock) {
+        return;
+      }
+      sidedockObserver.disconnect();
+      observedSidedock = rightSidedock;
+      if (rightSidedock) {
+        sidedockObserver.observe(rightSidedock, {
+          attributes: true,
+          attributeFilter: ['class'],
+        });
+      }
+    };
+    const refreshFloatingEntry = (): void => {
       this.floatingButton?.mount();
+      observeRightSidedock();
       updateFloatingVisibility();
+    };
+    this.app.workspace.onLayoutReady(() => {
+      refreshFloatingEntry();
     });
     this.registerEvent(
       this.app.workspace.on('layout-change', () => {
-        this.floatingButton?.mount();
-        updateFloatingVisibility();
+        refreshFloatingEntry();
       }),
     );
+    this.registerEvent(
+      this.app.workspace.on('active-leaf-change', () => {
+        refreshFloatingEntry();
+      }),
+    );
+    this.register(() => sidedockObserver.disconnect());
     this.register(() => this.floatingButton?.unmount());
 
+    this.addRibbonIcon(
+      'logo-crystal',
+      'Open Threadleaf for the current page',
+      () => {
+        void this.openAgent();
+      },
+    );
     this.addCommand({
       id: 'open-page-agent',
       name: 'Open agent for current page',
