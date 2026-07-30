@@ -57,6 +57,7 @@ function createFakeRuntime(options: {
   gateByConversation?: Map<string, Promise<void>>;
   approval?: boolean;
   partialBeforeGate?: string;
+  preparedRequests?: ChatTurnRequest[];
 }): ChatRuntime {
   let conversationId = '';
   let approvalCallback: ApprovalCallback | null = null;
@@ -67,6 +68,7 @@ function createFakeRuntime(options: {
       conversationId = state?.id ?? '';
     },
     prepareTurn(request: ChatTurnRequest): PreparedChatTurn {
+      options.preparedRequests?.push(structuredClone(request));
       return {
         request,
         persistedContent: request.text,
@@ -400,5 +402,32 @@ describe('RuntimeCoordinator', () => {
       (await coordinator.getSnapshot('a')).conversation?.title,
       'Explain the page conversation architecture',
     );
+  });
+
+  it('persists and forwards additional page references with the turn', async () => {
+    const conversations = new Map([['a', conversation('a')]]);
+    const preparedRequests: ChatTurnRequest[] = [];
+    const coordinator = new RuntimeCoordinator(
+      host,
+      new MemoryConversationStore(conversations),
+      () => createFakeRuntime({ preparedRequests }),
+    );
+
+    await coordinator.send(
+      'a',
+      'Compare the pages',
+      'A.md',
+      ['B.md', 'Folder/C.base'],
+    );
+
+    const snapshot = await coordinator.getSnapshot('a');
+    assert.deepEqual(
+      snapshot.conversation?.messages.at(-2)?.referencedPagePaths,
+      ['B.md', 'Folder/C.base'],
+    );
+    assert.deepEqual(preparedRequests[0].referencedPagePaths, [
+      'B.md',
+      'Folder/C.base',
+    ]);
   });
 });
