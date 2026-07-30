@@ -168,6 +168,37 @@
   text-align: center;
 }
 
+.threadleaf-view__model-trigger {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: var(--size-4-1);
+  padding: 4px 8px;
+  width: auto;
+}
+
+.threadleaf-view__model-icon {
+  display: flex;
+}
+
+.threadleaf-view__model-icon svg {
+  height: var(--icon-xs);
+  width: var(--icon-xs);
+}
+
+.threadleaf-view__model-label {
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium);
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.threadleaf-view__model-trigger.is-loading {
+  color: var(--text-muted);
+}
+
 .threadleaf-view__empty {
   align-items: center;
   display: flex;

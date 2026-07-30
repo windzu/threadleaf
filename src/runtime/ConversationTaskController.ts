@@ -8,6 +8,7 @@ import type {
   StreamChunk,
 } from '../core/types';
 import type { ConversationStore } from '../conversations/ConversationRepository';
+import { deriveConversationTitle } from '../conversations/conversationTitle';
 import { TurnCheckpointManager } from './TurnCheckpointManager';
 import type {
   ConversationRuntimeSnapshot,
@@ -126,6 +127,9 @@ export class ConversationTaskController {
       contentBlocks: [],
       toolCalls: [],
     };
+    if (conversation.title === 'New conversation') {
+      conversation.title = deriveConversationTitle(text);
+    }
     conversation.messages.push(userMessage, assistantMessage);
     conversation.activeTurn = {
       status: 'running',
@@ -236,6 +240,23 @@ export class ConversationTaskController {
     }
     this.emit();
     resolve(decision);
+  }
+
+  async setModel(model: string | undefined): Promise<void> {
+    if (this.taskStatus === 'running' || this.taskStatus === 'waiting-approval') {
+      throw new Error('Cannot change the model while a turn is running.');
+    }
+    if (!this.conversation) {
+      throw new Error(`Conversation "${this.conversationId}" does not exist.`);
+    }
+    if (model) {
+      this.conversation.selectedModel = model;
+    } else {
+      delete this.conversation.selectedModel;
+    }
+    await this.conversations.save(this.conversation);
+    this.runtime.syncConversationState(this.conversation);
+    this.emit();
   }
 
   cancel(): void {

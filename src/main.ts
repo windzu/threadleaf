@@ -13,6 +13,8 @@ import {
 import { PageContextResolver } from './page-context/PageContextResolver';
 import { PageConversationRouter } from './page-context/PageConversationRouter';
 import { PageConversationService } from './page-context/PageConversationService';
+import type { ConversationModelService } from './models/types';
+import { CodexConversationModelService } from './providers/codex/CodexConversationModelService';
 import { CodexAppServerGateway } from './providers/codex/runtime/CodexAppServerGateway';
 import { CodexChatRuntime } from './providers/codex/runtime/CodexChatRuntime';
 import { RuntimeCoordinator } from './runtime/RuntimeCoordinator';
@@ -26,6 +28,7 @@ export default class ThreadleafPlugin extends Plugin {
   private pageIndex: PageAgentIndex | null = null;
   private router: PageConversationRouter | null = null;
   private pageConversations: PageConversationService | null = null;
+  private conversationModels: ConversationModelService | null = null;
   private conversations: ConversationRepository | null = null;
   private runtimeCoordinator: RuntimeCoordinator | null = null;
   private codexGateway: CodexAppServerGateway | null = null;
@@ -61,7 +64,11 @@ export default class ThreadleafPlugin extends Plugin {
     this.pageConversations = new PageConversationService(
       this.router,
       this.conversations,
-      this.threadleafSettings.model,
+    );
+    this.conversationModels = new CodexConversationModelService(
+      this.codexGateway,
+      this.runtimeCoordinator,
+      this.threadleafSettings,
     );
 
     this.registerView(
@@ -71,6 +78,7 @@ export default class ThreadleafPlugin extends Plugin {
         this.requireRouter(),
         this.requirePageConversations(),
         this.requireRuntimeCoordinator(),
+        this.requireConversationModels(),
       ),
     );
 
@@ -185,11 +193,11 @@ export default class ThreadleafPlugin extends Plugin {
     return this.pageConversations;
   }
 
-  private requireSettings(): ThreadleafSettings {
-    if (!this.threadleafSettings) {
-      throw new Error('Threadleaf settings are not initialized.');
+  private requireConversationModels(): ConversationModelService {
+    if (!this.conversationModels) {
+      throw new Error('Conversation model service is not initialized.');
     }
-    return this.threadleafSettings;
+    return this.conversationModels;
   }
 
   private requireCodexGateway(): CodexAppServerGateway {

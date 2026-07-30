@@ -914,7 +914,11 @@ export class CodexChatRuntime implements ChatRuntime {
     queryOptions?: ChatRuntimeQueryOptions,
     providerSettings: Record<string, unknown> = this.getProviderSettings(),
   ): string | undefined {
-    const model = queryOptions?.model ?? providerSettings.model as string | undefined;
+    const explicitModel = queryOptions?.model?.trim();
+    if (explicitModel) {
+      return toCodexRuntimeModelId(explicitModel);
+    }
+    const model = providerSettings.model as string | undefined;
     if (model) {
       const runtimeModel = toCodexRuntimeModelId(model);
       const isEnabled = getCodexModelOptions(providerSettings).some(option =>

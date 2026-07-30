@@ -5,7 +5,7 @@ import type {
 import type { PageConversationRoute } from './PageConversationRouter';
 
 export interface PageConversationRepository {
-  create(selectedModel: string): Promise<Conversation>;
+  create(selectedModel?: string): Promise<Conversation>;
   load(conversationId: string): Promise<Conversation | null>;
 }
 
@@ -32,7 +32,6 @@ export class PageConversationService {
   constructor(
     private readonly router: PageConversationController,
     private readonly conversations: PageConversationRepository,
-    private readonly defaultModel: string,
   ) {}
 
   async getHistory(
@@ -99,10 +98,13 @@ export class PageConversationService {
     await this.router.selectConversationForPage(pagePath, conversationId);
   }
 
-  async ensureConversationForPage(pagePath: string): Promise<string> {
+  async ensureConversationForPage(
+    pagePath: string,
+    selectedModel?: string,
+  ): Promise<string> {
     let flight = this.creationFlights.get(pagePath);
     if (!flight) {
-      flight = this.createConversationForPage(pagePath);
+      flight = this.createConversationForPage(pagePath, selectedModel);
       this.creationFlights.set(pagePath, flight);
     }
     try {
@@ -114,8 +116,11 @@ export class PageConversationService {
     }
   }
 
-  private async createConversationForPage(pagePath: string): Promise<string> {
-    const conversation = await this.conversations.create(this.defaultModel);
+  private async createConversationForPage(
+    pagePath: string,
+    selectedModel?: string,
+  ): Promise<string> {
+    const conversation = await this.conversations.create(selectedModel);
     await this.router.associateConversationForPage(pagePath, conversation.id);
     return conversation.id;
   }
