@@ -9,17 +9,18 @@ import type {
 import type { ConversationTaskStatus } from '../runtime/RuntimeCoordinator';
 import { renderModelPickerControl } from './ModelPickerControl';
 import { renderPageReferenceComposer } from './PageReferenceComposer';
+import type { ComposerPageReference } from './pageReferenceMentions';
 
 export interface WindyComposerOptions {
   primaryPage: PageReference;
   text: string;
-  references: PageReference[];
+  references: ComposerPageReference[];
   selectedModel: string | undefined;
   status: ConversationTaskStatus;
   permissionMode: PermissionMode;
   models: ConversationModelService;
   referenceService: PageReferenceService;
-  onDraftChange: (text: string, references: PageReference[]) => void;
+  onDraftChange: (text: string, references: ComposerPageReference[]) => void;
   onModelSelect: (model: string | null) => Promise<void>;
   onPermissionModeSelect: (mode: PermissionMode) => Promise<void>;
   onSubmit: (text: string) => void;

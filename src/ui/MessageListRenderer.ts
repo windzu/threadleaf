@@ -9,6 +9,7 @@ import type {
   ChatMessage,
   ToolCallInfo,
 } from '../core/types';
+import { isInlinePageReference } from './pageReferenceMentions';
 import type { ConversationTaskStatus } from '../runtime/RuntimeCoordinator';
 import {
   formatToolName,
@@ -106,13 +107,16 @@ export class MessageListRenderer extends Component {
     messageElement: HTMLElement,
     message: ChatMessage,
   ): void {
-    if (!message.referencedPagePaths?.length) {
+    const attachedPaths = message.referencedPagePaths?.filter(
+      path => !isInlinePageReference(message.content, path),
+    ) ?? [];
+    if (attachedPaths.length === 0) {
       return;
     }
     const references = messageElement.createDiv(
       'windy-message__references',
     );
-    for (const path of message.referencedPagePaths) {
+    for (const path of attachedPaths) {
       references.createSpan({
         cls: 'windy-message__reference',
         text: path,
