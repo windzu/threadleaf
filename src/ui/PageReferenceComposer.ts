@@ -7,8 +7,10 @@ import type {
 import {
   attachPageReference,
   type ComposerPageReference,
+  findPageMentionQuery,
   insertInlinePageReference,
   reconcileInlinePageReferences,
+  splitPageMentionText,
   type TextRange,
 } from './pageReferenceMentions';
 
@@ -23,7 +25,8 @@ export interface PageReferenceComposerOptions {
 }
 
 export interface PageReferenceComposerControl {
-  input: HTMLTextAreaElement;
+  input: HTMLDivElement;
+  getText(): string;
   createAddButton(container: HTMLElement): HTMLButtonElement;
 }
 
@@ -39,25 +42,36 @@ export function renderPageReferenceComposer(
 
   const chips = container.createDiv('windy-composer__references');
   renderChips();
-  const input = container.createEl('textarea', {
+  const input = container.createDiv({
     cls: 'windy-view__input',
     attr: {
-      placeholder: 'Ask to edit, explain, or organize this page…',
-      rows: '3',
+      contenteditable: String(!options.disabled),
+      role: 'textbox',
+      'aria-multiline': 'true',
+      'aria-disabled': String(options.disabled),
+      'data-placeholder': 'Ask to edit, explain, or organize this page…',
     },
   });
-  input.value = options.text;
-  input.disabled = options.disabled;
+  input.spellcheck = true;
+  renderEditorText(options.text);
 
   input.addEventListener('input', () => {
-    references = reconcileInlinePageReferences(input.value, references);
-    options.onChange(input.value, references);
-    const match = findMention(input);
+    const text = readEditorText(input);
+    references = reconcileInlinePageReferences(text, references);
+    options.onChange(text, references);
+    const caret = getEditorCaretOffset(input);
+    const match = caret === null
+      ? null
+      : findPageMentionQuery(
+        text,
+        caret,
+        getEditorMentionRanges(input),
+      );
     if (!match) {
       closePopup();
       return;
     }
-    mentionRange = { start: match.start, end: input.selectionStart };
+    mentionRange = { start: match.start, end: match.end };
     showResults(match.query);
   });
   input.addEventListener('keydown', event => {
@@ -87,12 +101,21 @@ export function renderPageReferenceComposer(
       && !options.disabled
     ) {
       event.preventDefault();
-      options.onSubmit(input.value);
+      options.onSubmit(readEditorText(input));
     }
+  });
+  input.addEventListener('paste', event => {
+    if (options.disabled) {
+      return;
+    }
+    event.preventDefault();
+    insertPlainText(input, event.clipboardData?.getData('text/plain') ?? '');
+    input.dispatchEvent(new InputEvent('input', { bubbles: true }));
   });
 
   return {
     input,
+    getText: () => readEditorText(input),
     createAddButton(actions: HTMLElement): HTMLButtonElement {
       const button = actions.createEl('button', {
         cls: 'windy-view__add-reference clickable-icon',
@@ -110,22 +133,6 @@ export function renderPageReferenceComposer(
       return button;
     },
   };
-
-  function findMention(textarea: HTMLTextAreaElement): {
-    start: number;
-    query: string;
-  } | null {
-    const beforeCursor = textarea.value.slice(0, textarea.selectionStart);
-    const match = beforeCursor.match(/(?:^|\s)@([^@\n]*)$/);
-    if (!match) {
-      return null;
-    }
-    const prefixLength = match[0].startsWith('@') ? 0 : 1;
-    return {
-      start: beforeCursor.length - match[0].length + prefixLength,
-      query: match[1],
-    };
-  }
 
   function showResults(query: string): void {
     results = options.referenceService.search(
@@ -175,20 +182,19 @@ export function renderPageReferenceComposer(
   function selectReference(reference: PageReference): void {
     if (mentionRange) {
       const selection = insertInlinePageReference(
-        input.value,
+        readEditorText(input),
         mentionRange,
         reference,
         references,
       );
-      input.value = selection.text;
       references = selection.references;
-      input.selectionStart = selection.caret;
-      input.selectionEnd = selection.caret;
+      renderEditorText(selection.text);
+      setEditorCaretOffset(input, selection.caret);
     } else {
       references = attachPageReference(references, reference);
     }
     mentionRange = null;
-    options.onChange(input.value, references);
+    options.onChange(readEditorText(input), references);
     renderChips();
     closePopup();
     input.focus();
@@ -228,7 +234,7 @@ export function renderPageReferenceComposer(
       references = references.filter(
         item => item.page.path !== reference.path,
       );
-      options.onChange(input.value, references);
+      options.onChange(readEditorText(input), references);
       renderChips();
       input.focus();
     });
@@ -243,4 +249,162 @@ export function renderPageReferenceComposer(
       mentionRange = null;
     }
   }
+
+  function renderEditorText(text: string): void {
+    input.empty();
+    const inlineReferences = references.filter(
+      reference => reference.placement === 'inline',
+    );
+    const referencesByPath = new Map(
+      inlineReferences.map(reference => [reference.page.path, reference.page]),
+    );
+    const segments = splitPageMentionText(
+      text,
+      inlineReferences.map(reference => reference.page.path),
+    );
+    for (const segment of segments) {
+      if (segment.type === 'text') {
+        input.appendText(segment.text);
+        continue;
+      }
+      const reference = referencesByPath.get(segment.path);
+      if (!reference) {
+        input.appendText(`@${segment.path}`);
+        continue;
+      }
+      renderInlineReference(input, reference);
+    }
+  }
+}
+
+function renderInlineReference(
+  container: HTMLElement,
+  reference: PageReference,
+): void {
+  const mention = container.createSpan({
+    cls: 'windy-composer__inline-reference',
+    attr: {
+      contenteditable: 'false',
+      'data-page-path': reference.path,
+      'aria-label': `Page: ${reference.path}`,
+      title: reference.path,
+    },
+  });
+  const icon = mention.createSpan('windy-composer__inline-reference-icon');
+  setIcon(icon, reference.extension === 'base' ? 'database' : 'file-text');
+  mention.createSpan({
+    cls: 'windy-composer__inline-reference-title',
+    text: reference.basename,
+  });
+}
+
+function readEditorText(root: Node): string {
+  if (root instanceof HTMLElement) {
+    const path = root.dataset.pagePath;
+    if (path) {
+      return `@${path}`;
+    }
+  }
+  if (root instanceof HTMLBRElement) {
+    return '\n';
+  }
+  if (root instanceof Text) {
+    return root.data;
+  }
+  return [...root.childNodes].map(readEditorText).join('');
+}
+
+function getEditorCaretOffset(root: HTMLElement): number | null {
+  const selection = window.getSelection();
+  if (
+    !selection
+    || !selection.isCollapsed
+    || !selection.focusNode
+    || !root.contains(selection.focusNode)
+  ) {
+    return null;
+  }
+  const range = document.createRange();
+  range.setStart(root, 0);
+  range.setEnd(selection.focusNode, selection.focusOffset);
+  return readEditorText(range.cloneContents()).length;
+}
+
+function getEditorMentionRanges(root: Node): TextRange[] {
+  const ranges: TextRange[] = [];
+  let offset = 0;
+  const visit = (node: Node): void => {
+    if (node instanceof HTMLElement && node.dataset.pagePath) {
+      const start = offset;
+      offset += `@${node.dataset.pagePath}`.length;
+      ranges.push({ start, end: offset });
+      return;
+    }
+    if (node instanceof HTMLBRElement) {
+      offset += 1;
+      return;
+    }
+    if (node instanceof Text) {
+      offset += node.data.length;
+      return;
+    }
+    for (const child of [...node.childNodes]) {
+      visit(child);
+    }
+  };
+  visit(root);
+  return ranges;
+}
+
+function setEditorCaretOffset(root: HTMLElement, offset: number): void {
+  const range = document.createRange();
+  let remaining = Math.max(0, offset);
+  for (const node of [...root.childNodes]) {
+    const length = readEditorText(node).length;
+    if (node instanceof Text && remaining <= length) {
+      range.setStart(node, remaining);
+      range.collapse(true);
+      applySelection(range);
+      return;
+    }
+    if (remaining <= length) {
+      if (remaining === 0) {
+        range.setStartBefore(node);
+      } else {
+        range.setStartAfter(node);
+      }
+      range.collapse(true);
+      applySelection(range);
+      return;
+    }
+    remaining -= length;
+  }
+  range.selectNodeContents(root);
+  range.collapse(false);
+  applySelection(range);
+}
+
+function applySelection(range: Range): void {
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+}
+
+function insertPlainText(root: HTMLElement, text: string): void {
+  const selection = window.getSelection();
+  if (
+    !selection
+    || selection.rangeCount === 0
+    || !selection.focusNode
+    || !root.contains(selection.focusNode)
+  ) {
+    return;
+  }
+  const range = selection.getRangeAt(0);
+  range.deleteContents();
+  const node = document.createTextNode(text);
+  range.insertNode(node);
+  range.setStartAfter(node);
+  range.collapse(true);
+  applySelection(range);
 }

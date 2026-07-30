@@ -4,9 +4,11 @@ import { describe, it } from 'node:test';
 import type { PageReference } from '../../src/page-context/PageReferenceService';
 import {
   attachPageReference,
+  findPageMentionQuery,
   getReferencedPagePaths,
   insertInlinePageReference,
   reconcileInlinePageReferences,
+  splitPageMentionText,
 } from '../../src/ui/pageReferenceMentions';
 
 const architecture: PageReference = {
@@ -69,5 +71,62 @@ describe('page reference mentions', () => {
       'Projects/Implementation.md',
     ]);
     assert.equal(reconciled[0]?.placement, 'attached');
+  });
+
+  it('segments inline references without exposing their path as plain text', () => {
+    assert.deepEqual(
+      splitPageMentionText(
+        'Use @Projects/Architecture.md to revise @Projects/Implementation.md',
+        [
+          'Projects/Architecture.md',
+          'Projects/Implementation.md',
+        ],
+      ),
+      [
+        { type: 'text', text: 'Use ' },
+        { type: 'mention', path: 'Projects/Architecture.md' },
+        { type: 'text', text: ' to revise ' },
+        { type: 'mention', path: 'Projects/Implementation.md' },
+      ],
+    );
+  });
+
+  it('prefers the longest path when page mention names overlap', () => {
+    assert.deepEqual(
+      splitPageMentionText(
+        '@Projects/OCC data.md',
+        ['Projects/OCC', 'Projects/OCC data.md'],
+      ),
+      [{ type: 'mention', path: 'Projects/OCC data.md' }],
+    );
+  });
+
+  it('finds mentions next to Chinese text without reopening completed tokens', () => {
+    assert.deepEqual(
+      findPageMentionQuery('参考@OCC', 6, []),
+      { start: 2, end: 6, query: 'OCC' },
+    );
+    const completed = '参考@Projects/OCC数据.md 后继续';
+    assert.equal(
+      findPageMentionQuery(
+        completed,
+        completed.length,
+        [{ start: 2, end: 20 }],
+      ),
+      null,
+    );
+    const repeated = `${completed} @Projects/OCC`;
+    assert.deepEqual(
+      findPageMentionQuery(
+        repeated,
+        repeated.length,
+        [{ start: 2, end: 20 }],
+      ),
+      {
+        start: completed.length + 1,
+        end: repeated.length,
+        query: 'Projects/OCC',
+      },
+    );
   });
 });

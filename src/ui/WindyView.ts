@@ -76,7 +76,7 @@ export class WindyView extends ItemView {
 
   focusComposer(): void {
     this.contentEl
-      .querySelector<HTMLTextAreaElement>('.windy-view__input')
+      .querySelector<HTMLElement>('.windy-view__input')
       ?.focus();
   }
 
