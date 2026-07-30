@@ -1,5 +1,8 @@
 import type { ChatTurnRequest, PreparedChatTurn } from '../../../core/runtime/types';
-import { appendCurrentNote } from '../../../utils/context';
+import {
+  appendContextFiles,
+  appendCurrentNote,
+} from '../../../utils/context';
 
 function isCompactCommand(text: string): boolean {
   return /^\/compact(\s|$)/i.test(text);
@@ -18,11 +21,18 @@ export function encodeCodexTurn(request: ChatTurnRequest): PreparedChatTurn {
     };
   }
 
-  const sections: string[] = [
-    request.primaryPagePath
-      ? appendCurrentNote(request.text, request.primaryPagePath)
-      : request.text,
-  ];
+  let pageContextPrompt = request.primaryPagePath
+    ? appendCurrentNote(request.text, request.primaryPagePath)
+    : request.text;
+  const referencedPagePaths = [...new Set(request.referencedPagePaths ?? [])]
+    .filter(path => path && path !== request.primaryPagePath);
+  if (referencedPagePaths.length > 0) {
+    pageContextPrompt = appendContextFiles(
+      pageContextPrompt,
+      referencedPagePaths,
+    );
+  }
+  const sections: string[] = [pageContextPrompt];
 
   if (request.editorSelection?.selectedText) {
     sections.push(

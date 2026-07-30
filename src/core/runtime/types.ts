@@ -46,6 +46,7 @@ export interface ChatTurnRequest {
   text: string;
   images?: ImageAttachment[];
   primaryPagePath?: string;
+  referencedPagePaths?: string[];
   editorSelection?: EditorSelectionContext | null;
   browserSelection?: BrowserSelectionContext | null;
   canvasSelection?: CanvasSelectionContext | null;

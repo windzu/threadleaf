@@ -8,18 +8,28 @@ import type {
 import type { PageConversationService } from '../page-context/PageConversationService';
 import type { ConversationModelService } from '../models/types';
 import type {
+  PageReference,
+  PageReferenceService,
+} from '../page-context/PageReferenceService';
+import type {
   ConversationRuntimeSnapshot,
   RuntimeCoordinator,
 } from '../runtime/RuntimeCoordinator';
 import { renderConversationHistoryControl } from './ConversationHistoryControl';
-import { renderModelPickerControl } from './ModelPickerControl';
+import { renderThreadleafComposer } from './ThreadleafComposer';
 
 export const VIEW_TYPE_THREADLEAF = 'threadleaf-agent-view';
 
+interface ComposerDraft {
+  text: string;
+  references: PageReference[];
+  selectedModel?: string;
+}
+
 export class ThreadleafView extends ItemView {
   private draftPagePath: string | null = null;
-  private draftSelectedModel: string | undefined;
   private history: ConversationMeta[] = [];
+  private composerDrafts = new Map<string, ComposerDraft>();
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -27,6 +37,7 @@ export class ThreadleafView extends ItemView {
     private readonly pageConversations: PageConversationService,
     private readonly runtimeCoordinator: RuntimeCoordinator,
     private readonly conversationModels: ConversationModelService,
+    private readonly pageReferences: PageReferenceService,
   ) {
     super(leaf);
   }
@@ -54,7 +65,6 @@ export class ThreadleafView extends ItemView {
     this.register(this.router.onChange(route => {
       if (this.draftPagePath && this.draftPagePath !== route.page?.path) {
         this.draftPagePath = null;
-        this.draftSelectedModel = undefined;
       }
       void this.renderRoute(route);
     }));
@@ -163,6 +173,17 @@ export class ThreadleafView extends ItemView {
         cls: 'threadleaf-message__role',
         text: message.role === 'user' ? 'You' : 'Threadleaf',
       });
+      if (message.referencedPagePaths?.length) {
+        const references = messageElement.createDiv(
+          'threadleaf-message__references',
+        );
+        for (const path of message.referencedPagePaths) {
+          references.createSpan({
+            cls: 'threadleaf-message__reference',
+            text: path,
+          });
+        }
+      }
       messageElement.createDiv({
         cls: 'threadleaf-message__content',
         text: message.displayContent
@@ -194,56 +215,40 @@ export class ThreadleafView extends ItemView {
       this.renderInterruptedRecovery(snapshot, page.path);
     }
 
-    const composer = this.contentEl.createDiv('threadleaf-view__composer');
-    const input = composer.createEl('textarea', {
-      cls: 'threadleaf-view__input',
-      attr: {
-        placeholder: `Ask about ${page.basename}…`,
-        rows: '3',
-      },
-    });
-    const actions = composer.createDiv('threadleaf-view__composer-actions');
     const status = snapshot?.status ?? 'idle';
-    actions.createDiv({
-      cls: `threadleaf-view__status threadleaf-view__status--${status}`,
-      text: this.statusLabel(status),
-    });
-    const isRunning = status === 'running' || status === 'waiting-approval';
+    const composerDraft = this.getComposerDraft(page.path);
     const isDraft = !snapshot?.conversation;
-    renderModelPickerControl(actions, {
+    renderThreadleafComposer(this.contentEl, {
+      primaryPage: page,
+      text: composerDraft.text,
+      references: composerDraft.references,
       selectedModel: isDraft
-        ? this.draftSelectedModel
+        ? composerDraft.selectedModel
         : snapshot.conversation?.selectedModel,
-      disabled: isRunning,
+      status,
       models: this.conversationModels,
-      onSelect: async model => {
+      referenceService: this.pageReferences,
+      onDraftChange: (text, references) => {
+        composerDraft.text = text;
+        composerDraft.references = references;
+      },
+      onModelSelect: async model => {
         if (!snapshot?.conversation) {
-          this.draftSelectedModel = model ?? undefined;
+          composerDraft.selectedModel = model ?? undefined;
           this.renderConversation(route, snapshot, history);
           return;
         }
         await this.conversationModels.select(snapshot.conversation.id, model);
       },
-    });
-    const sendButton = actions.createEl('button', {
-      cls: 'mod-cta',
-      text: isRunning ? 'Stop' : 'Send',
-    });
-    sendButton.addEventListener('click', () => {
-      if (isRunning) {
+      onSubmit: text => {
+        void this.send(text);
+      },
+      onStop: () => {
         const conversationId = snapshot?.conversation?.id;
         if (conversationId) {
           this.runtimeCoordinator.cancel(conversationId);
         }
-        return;
-      }
-      void this.send(input.value);
-    });
-    input.addEventListener('keydown', event => {
-      if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && !isRunning) {
-        event.preventDefault();
-        void this.send(input.value);
-      }
+      },
     });
   }
 
@@ -317,7 +322,10 @@ export class ThreadleafView extends ItemView {
       return;
     }
     this.draftPagePath = route.page.path;
-    this.draftSelectedModel = undefined;
+    this.composerDrafts.set(route.page.path, {
+      text: '',
+      references: [],
+    });
     this.renderConversation(route, null, this.history);
   }
 
@@ -328,44 +336,43 @@ export class ThreadleafView extends ItemView {
       return;
     }
     const pagePath = route.page.path;
+    const composerDraft = this.getComposerDraft(pagePath);
+    const referencedPagePaths = composerDraft.references.map(
+      reference => reference.path,
+    );
     try {
       const conversationId = this.draftPagePath === pagePath
         || !route.activeConversationId
         ? await this.pageConversations.ensureConversationForPage(
           pagePath,
-          this.draftSelectedModel,
+          composerDraft.selectedModel,
         )
         : route.activeConversationId;
       if (this.draftPagePath === pagePath) {
         this.draftPagePath = null;
-        this.draftSelectedModel = undefined;
       }
+      this.composerDrafts.delete(pagePath);
       await this.runtimeCoordinator.send(
         conversationId,
         text,
         pagePath,
+        referencedPagePaths,
       );
     } catch (error) {
+      if (!this.composerDrafts.has(pagePath)) {
+        this.composerDrafts.set(pagePath, composerDraft);
+      }
       new Notice(error instanceof Error ? error.message : String(error));
     }
   }
 
-  private statusLabel(status: ConversationRuntimeSnapshot['status']): string {
-    switch (status) {
-      case 'running':
-        return 'Running';
-      case 'waiting-approval':
-        return 'Needs approval';
-      case 'completed':
-        return 'Completed';
-      case 'failed':
-        return 'Failed';
-      case 'cancelled':
-        return 'Cancelled';
-      case 'interrupted':
-        return 'Interrupted';
-      default:
-        return 'Ready';
+  private getComposerDraft(pagePath: string): ComposerDraft {
+    let draft = this.composerDrafts.get(pagePath);
+    if (!draft) {
+      draft = { text: '', references: [] };
+      this.composerDrafts.set(pagePath, draft);
     }
+    return draft;
   }
+
 }

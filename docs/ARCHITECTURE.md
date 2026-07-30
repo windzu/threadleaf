@@ -73,12 +73,18 @@ runtime accepts only notifications matching its current `threadId` and
 - An explicit model selection belongs to the conversation. An absent
   `selectedModel` means `Auto` and resolves through the current Threadleaf
   default when a turn starts.
+- Additional page references belong to the user turn that attached them. Their
+  Vault paths are persisted with the message and encoded as `<context_files>`;
+  note bodies are read by the agent on demand instead of being copied wholesale
+  into every prompt.
 
 ## Current boundaries
 
 - `src/page-context`: active page detection and page-to-conversation routing.
 - `src/page-context/PageConversationService`: page-scoped history summaries,
   lazy first-send creation, and conversation selection.
+- `src/page-context/PageReferenceService`: searchable Markdown and Bases page
+  references for composer mentions.
 - `src/conversations`: persisted conversation content and provider session
   metadata.
 - `src/models`: provider-neutral model-selection contracts consumed by UI.

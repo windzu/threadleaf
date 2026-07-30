@@ -13,6 +13,7 @@ import {
 import { PageContextResolver } from './page-context/PageContextResolver';
 import { PageConversationRouter } from './page-context/PageConversationRouter';
 import { PageConversationService } from './page-context/PageConversationService';
+import { PageReferenceService } from './page-context/PageReferenceService';
 import type { ConversationModelService } from './models/types';
 import { CodexConversationModelService } from './providers/codex/CodexConversationModelService';
 import { CodexAppServerGateway } from './providers/codex/runtime/CodexAppServerGateway';
@@ -29,6 +30,7 @@ export default class ThreadleafPlugin extends Plugin {
   private router: PageConversationRouter | null = null;
   private pageConversations: PageConversationService | null = null;
   private conversationModels: ConversationModelService | null = null;
+  private pageReferences: PageReferenceService | null = null;
   private conversations: ConversationRepository | null = null;
   private runtimeCoordinator: RuntimeCoordinator | null = null;
   private codexGateway: CodexAppServerGateway | null = null;
@@ -70,6 +72,13 @@ export default class ThreadleafPlugin extends Plugin {
       this.runtimeCoordinator,
       this.threadleafSettings,
     );
+    this.pageReferences = new PageReferenceService(() => (
+      this.app.vault.getFiles().map(file => ({
+        path: file.path,
+        basename: file.basename,
+        extension: file.extension,
+      }))
+    ));
 
     this.registerView(
       VIEW_TYPE_THREADLEAF,
@@ -79,6 +88,7 @@ export default class ThreadleafPlugin extends Plugin {
         this.requirePageConversations(),
         this.requireRuntimeCoordinator(),
         this.requireConversationModels(),
+        this.requirePageReferences(),
       ),
     );
 
@@ -198,6 +208,13 @@ export default class ThreadleafPlugin extends Plugin {
       throw new Error('Conversation model service is not initialized.');
     }
     return this.conversationModels;
+  }
+
+  private requirePageReferences(): PageReferenceService {
+    if (!this.pageReferences) {
+      throw new Error('Page reference service is not initialized.');
+    }
+    return this.pageReferences;
   }
 
   private requireCodexGateway(): CodexAppServerGateway {

@@ -101,6 +101,7 @@ export class ConversationTaskController {
     text: string,
     primaryPagePath: string,
     displayContent?: string,
+    referencedPagePaths: string[] = [],
   ): Promise<void> {
     if (this.taskStatus === 'running' || this.taskStatus === 'waiting-approval') {
       throw new Error('This conversation already has a running turn.');
@@ -118,6 +119,9 @@ export class ConversationTaskController {
       ...(displayContent ? { displayContent } : {}),
       timestamp: startedAt,
       primaryPagePath,
+      ...(referencedPagePaths.length > 0
+        ? { referencedPagePaths: [...new Set(referencedPagePaths)] }
+        : {}),
     };
     const assistantMessage: ChatMessage = {
       id: randomUUID(),
@@ -147,7 +151,11 @@ export class ConversationTaskController {
     this.runtime.syncConversationState(conversation);
     this.emit();
 
-    const turn = this.runtime.prepareTurn({ text, primaryPagePath });
+    const turn = this.runtime.prepareTurn({
+      text,
+      primaryPagePath,
+      referencedPagePaths,
+    });
     try {
       for await (const chunk of this.runtime.query(
         turn,
@@ -214,6 +222,7 @@ export class ConversationTaskController {
       userMessage.content,
       userMessage.primaryPagePath ?? state.primaryPagePath,
       userMessage.displayContent,
+      userMessage.referencedPagePaths,
     );
   }
 

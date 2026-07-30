@@ -301,12 +301,131 @@
 .threadleaf-view__composer {
   border-top: 1px solid var(--background-modifier-border);
   padding-top: var(--size-4-3);
+  position: relative;
 }
 
 .threadleaf-view__input {
   min-height: 78px;
   resize: vertical;
   width: 100%;
+}
+
+.threadleaf-composer__references,
+.threadleaf-message__references {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-1);
+  margin-bottom: var(--size-4-2);
+}
+
+.threadleaf-composer__reference-chip,
+.threadleaf-message__reference {
+  align-items: center;
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  display: inline-flex;
+  font-size: var(--font-ui-smaller);
+  gap: 4px;
+  max-width: 100%;
+  padding: 3px 7px;
+}
+
+.threadleaf-composer__reference-icon,
+.threadleaf-composer__reference-remove {
+  display: flex;
+  flex: 0 0 auto;
+}
+
+.threadleaf-composer__reference-icon svg,
+.threadleaf-composer__reference-remove svg {
+  height: var(--icon-xs);
+  width: var(--icon-xs);
+}
+
+.threadleaf-composer__reference-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.threadleaf-composer__reference-remove {
+  height: 18px;
+  padding: 2px;
+  width: 18px;
+}
+
+.threadleaf-composer__mention-popup {
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  bottom: calc(100% + var(--size-4-2));
+  box-shadow: var(--shadow-s);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  left: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: var(--size-4-2);
+  position: absolute;
+  right: 0;
+  z-index: var(--layer-popover);
+}
+
+.threadleaf-composer__mention-result {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  display: flex;
+  gap: var(--size-4-2);
+  padding: var(--size-4-2);
+  text-align: left;
+  width: 100%;
+}
+
+.threadleaf-composer__mention-result:hover,
+.threadleaf-composer__mention-result.is-active {
+  background: var(--background-modifier-hover);
+}
+
+.threadleaf-composer__mention-icon {
+  color: var(--text-muted);
+  display: flex;
+  flex: 0 0 auto;
+}
+
+.threadleaf-composer__mention-labels {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.threadleaf-composer__mention-title,
+.threadleaf-composer__mention-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.threadleaf-composer__mention-title {
+  color: var(--text-normal);
+}
+
+.threadleaf-composer__mention-path,
+.threadleaf-composer__mention-empty {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.threadleaf-composer__mention-empty {
+  padding: var(--size-4-3);
+  text-align: center;
+}
+
+.threadleaf-view__add-reference {
+  flex: 0 0 auto;
 }
 
 .threadleaf-view__composer-actions {

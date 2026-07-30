@@ -46,6 +46,8 @@ export interface ChatMessage {
   toolCalls?: ToolCallInfo[];
   contentBlocks?: ContentBlock[];
   primaryPagePath?: string;
+  /** Additional Vault pages explicitly attached to this user turn. */
+  referencedPagePaths?: string[];
   images?: ImageAttachment[];
   /** True if this message represents a user interrupt (from SDK storage). */
   isInterrupt?: boolean;

@@ -96,8 +96,14 @@ export class RuntimeCoordinator {
     conversationId: string,
     text: string,
     primaryPagePath: string,
+    referencedPagePaths: string[] = [],
   ): Promise<void> {
-    await (await this.ensureTask(conversationId)).send(text, primaryPagePath);
+    await (await this.ensureTask(conversationId)).send(
+      text,
+      primaryPagePath,
+      undefined,
+      referencedPagePaths,
+    );
   }
 
   async retryInterrupted(conversationId: string): Promise<void> {
