@@ -68,6 +68,7 @@ export interface ChatMessage {
 export type PersistedTurnStatus =
   | 'running'
   | 'waiting-approval'
+  | 'waiting-input'
   | 'interrupted';
 
 export interface PersistedTurnState {

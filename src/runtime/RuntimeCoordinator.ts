@@ -1,6 +1,6 @@
 import type { ProviderHost } from '../core/providers/ProviderHost';
 import type { ChatRuntime } from '../core/runtime/ChatRuntime';
-import type { ApprovalDecision } from '../core/types';
+import type { ApprovalDecision, AskUserAnswers } from '../core/types';
 import type { ConversationStore } from '../conversations/ConversationRepository';
 import { ConversationTaskController } from './ConversationTaskController';
 import type {
@@ -49,10 +49,17 @@ export class RuntimeCoordinator {
   getActivitySummary(activeConversationId: string | null): RuntimeActivitySummary {
     const statuses = Array.from(this.tasks.values(), task => task.status);
     const runningCount = statuses.filter(
-      status => status === 'running' || status === 'waiting-approval',
+      status => (
+        status === 'running'
+        || status === 'waiting-approval'
+        || status === 'waiting-input'
+      ),
     ).length;
     const waitingApprovalCount = statuses.filter(
       status => status === 'waiting-approval',
+    ).length;
+    const waitingInputCount = statuses.filter(
+      status => status === 'waiting-input',
     ).length;
     const failedCount = statuses.filter(status => status === 'failed').length;
     const interruptedCount = statuses.filter(
@@ -64,31 +71,38 @@ export class RuntimeCoordinator {
 
     if (waitingApprovalCount > 0) {
       return this.activity(
-        'waiting-approval', waitingApprovalCount, runningCount,
-        waitingApprovalCount, failedCount, interruptedCount,
+        'waiting-approval', waitingApprovalCount + waitingInputCount, runningCount,
+        waitingApprovalCount, waitingInputCount, failedCount, interruptedCount,
+      );
+    }
+    if (waitingInputCount > 0) {
+      return this.activity(
+        'waiting-input', waitingInputCount, runningCount,
+        waitingApprovalCount, waitingInputCount, failedCount, interruptedCount,
       );
     }
     if (runningCount > 0) {
       return this.activity(
         'running', runningCount, runningCount,
-        waitingApprovalCount, failedCount, interruptedCount,
+        waitingApprovalCount, waitingInputCount, failedCount, interruptedCount,
       );
     }
     if (activeStatus === 'failed' || failedCount > 0) {
       return this.activity(
         'failed', failedCount, runningCount,
-        waitingApprovalCount, failedCount, interruptedCount,
+        waitingApprovalCount, waitingInputCount, failedCount, interruptedCount,
       );
     }
     if (activeStatus === 'interrupted' || interruptedCount > 0) {
       return this.activity(
         'interrupted', interruptedCount, runningCount,
-        waitingApprovalCount, failedCount, interruptedCount,
+        waitingApprovalCount, waitingInputCount, failedCount, interruptedCount,
       );
     }
     return this.activity(
       activeStatus === 'completed' ? 'completed' : 'idle',
-      0, runningCount, waitingApprovalCount, failedCount, interruptedCount,
+      0, runningCount, waitingApprovalCount, waitingInputCount,
+      failedCount, interruptedCount,
     );
   }
 
@@ -123,6 +137,13 @@ export class RuntimeCoordinator {
     decision: ApprovalDecision,
   ): void {
     this.tasks.get(conversationId)?.respondToApproval(decision);
+  }
+
+  respondToUserInput(
+    conversationId: string,
+    answers: AskUserAnswers,
+  ): void {
+    this.tasks.get(conversationId)?.respondToUserInput(answers);
   }
 
   cancel(conversationId: string): void {
@@ -188,6 +209,7 @@ export class RuntimeCoordinator {
     badgeCount: number,
     runningCount: number,
     waitingApprovalCount: number,
+    waitingInputCount: number,
     failedCount: number,
     interruptedCount: number,
   ): RuntimeActivitySummary {
@@ -196,6 +218,7 @@ export class RuntimeCoordinator {
       badgeCount,
       runningCount,
       waitingApprovalCount,
+      waitingInputCount,
       failedCount,
       interruptedCount,
     };

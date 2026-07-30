@@ -5,7 +5,11 @@ import {
   WorkspaceLeaf,
 } from 'obsidian';
 
-import type { ConversationMeta } from '../core/types';
+import type {
+  AskUserAnswers,
+  AskUserQuestionItem,
+  ConversationMeta,
+} from '../core/types';
 import type {
   PageConversationRoute,
   PageConversationRouter,
@@ -202,6 +206,10 @@ export class WindyView extends ItemView {
       this.renderApproval(snapshot);
     }
 
+    if (snapshot?.pendingUserInput) {
+      this.renderUserInput(messages, snapshot);
+    }
+
     if (snapshot?.error) {
       this.contentEl.createDiv({
         cls: 'windy-view__error',
@@ -329,6 +337,142 @@ export class WindyView extends ItemView {
         ),
       );
     });
+  }
+
+  private renderUserInput(
+    container: HTMLElement,
+    snapshot: ConversationRuntimeSnapshot,
+  ): void {
+    const pending = snapshot.pendingUserInput;
+    const conversationId = snapshot.conversation?.id;
+    if (!pending || !conversationId) {
+      return;
+    }
+
+    const form = container.createEl('form', {
+      cls: 'windy-view__user-input',
+    });
+    form.createEl('strong', { text: 'Windy needs your input' });
+    const readers = pending.questions.map((question, index) => (
+      this.renderUserInputQuestion(form, question, index)
+    ));
+    const actions = form.createDiv('windy-view__user-input-actions');
+    const submit = actions.createEl('button', {
+      cls: 'mod-cta',
+      text: 'Continue',
+      attr: { type: 'submit' },
+    });
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const answers: AskUserAnswers = {};
+      for (const read of readers) {
+        const answer = read();
+        if (!answer || (Array.isArray(answer.value) && answer.value.length === 0)) {
+          new Notice(`Answer “${answer?.label ?? 'the question'}” to continue.`);
+          return;
+        }
+        answers[answer.key] = answer.value;
+      }
+      this.runtimeCoordinator.respondToUserInput(conversationId, answers);
+    });
+  }
+
+  private renderUserInputQuestion(
+    container: HTMLElement,
+    question: AskUserQuestionItem,
+    index: number,
+  ): () => { key: string; label: string; value: string | string[] } | null {
+    const fieldset = container.createEl('fieldset', {
+      cls: 'windy-view__user-question',
+    });
+    fieldset.createEl('legend', {
+      text: question.header || `Question ${index + 1}`,
+    });
+    fieldset.createEl('p', { text: question.question });
+    const key = question.id || question.question;
+    const inputName = `windy-question-${index}`;
+
+    if (question.options.length === 0) {
+      const input = fieldset.createEl('input', {
+        cls: 'windy-view__user-text',
+        attr: {
+          type: question.isSecret ? 'password' : 'text',
+          autocomplete: question.isSecret ? 'off' : 'on',
+        },
+      });
+      return () => {
+        const value = input.value.trim();
+        return value ? { key, label: question.header, value } : null;
+      };
+    }
+
+    const optionInputs: HTMLInputElement[] = [];
+    for (const option of question.options) {
+      const label = fieldset.createEl('label', {
+        cls: 'windy-view__user-option',
+      });
+      const input = label.createEl('input', {
+        attr: {
+          type: question.multiSelect ? 'checkbox' : 'radio',
+          name: inputName,
+          value: option.label,
+        },
+      });
+      optionInputs.push(input);
+      const copy = label.createSpan('windy-view__user-option-copy');
+      copy.createSpan({ text: option.label });
+      if (option.description) {
+        copy.createEl('small', { text: option.description });
+      }
+    }
+
+    let otherInput: HTMLInputElement | null = null;
+    let otherChoice: HTMLInputElement | null = null;
+    if (question.isOther !== false) {
+      const other = fieldset.createEl('label', {
+        cls: 'windy-view__user-option windy-view__user-option--other',
+      });
+      otherChoice = other.createEl('input', {
+        attr: {
+          type: question.multiSelect ? 'checkbox' : 'radio',
+          name: inputName,
+          value: '__other__',
+        },
+      });
+      otherInput = other.createEl('input', {
+        cls: 'windy-view__user-text',
+        attr: {
+          type: question.isSecret ? 'password' : 'text',
+          placeholder: 'Other…',
+          autocomplete: question.isSecret ? 'off' : 'on',
+        },
+      });
+      otherInput.addEventListener('focus', () => {
+        if (otherChoice) {
+          otherChoice.checked = true;
+        }
+      });
+    }
+
+    return () => {
+      const selected = optionInputs
+        .filter(input => input.checked)
+        .map(input => input.value);
+      if (otherChoice?.checked) {
+        const custom = otherInput?.value.trim();
+        if (custom) {
+          selected.push(custom);
+        }
+      }
+      if (selected.length === 0) {
+        return null;
+      }
+      return {
+        key,
+        label: question.header,
+        value: question.multiSelect ? selected : selected[0]!,
+      };
+    };
   }
 
   private runRecoveryAction(action: () => Promise<void>): void {

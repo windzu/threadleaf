@@ -5,6 +5,7 @@ import type { ProviderHost } from '../../src/core/providers/ProviderHost';
 import type { ChatRuntime } from '../../src/core/runtime/ChatRuntime';
 import type {
   ApprovalCallback,
+  AskUserQuestionCallback,
   ChatTurnRequest,
   PreparedChatTurn,
 } from '../../src/core/runtime/types';
@@ -56,6 +57,7 @@ function deferred(): {
 function createFakeRuntime(options: {
   gateByConversation?: Map<string, Promise<void>>;
   approval?: boolean;
+  userInput?: Record<string, unknown>;
   partialBeforeGate?: string;
   preparedRequests?: ChatTurnRequest[];
   scriptedChunks?: StreamChunk[];
@@ -64,6 +66,7 @@ function createFakeRuntime(options: {
 }): ChatRuntime {
   let conversationId = '';
   let approvalCallback: ApprovalCallback | null = null;
+  let askUserCallback: AskUserQuestionCallback | null = null;
   let cancelled = false;
 
   const runtime = {
@@ -100,6 +103,12 @@ function createFakeRuntime(options: {
           type: 'text',
           content: decision === 'allow' ? 'approved' : 'denied',
         };
+      } else if (options.userInput && askUserCallback) {
+        const answers = await askUserCallback(options.userInput);
+        yield {
+          type: 'text',
+          content: JSON.stringify(answers),
+        };
       } else if (!cancelled) {
         yield { type: 'text', content: `response:${conversationId}` };
       }
@@ -108,7 +117,9 @@ function createFakeRuntime(options: {
     setApprovalCallback(callback: ApprovalCallback | null): void {
       approvalCallback = callback;
     },
-    setAskUserQuestionCallback(): void {},
+    setAskUserQuestionCallback(callback: AskUserQuestionCallback | null): void {
+      askUserCallback = callback;
+    },
     buildSessionUpdates(): { updates: Partial<Conversation> } {
       return { updates: { sessionId: `session:${conversationId}` } };
     },
@@ -155,6 +166,7 @@ describe('RuntimeCoordinator', () => {
       badgeCount: 1,
       runningCount: 1,
       waitingApprovalCount: 0,
+      waitingInputCount: 0,
       failedCount: 0,
       interruptedCount: 0,
     });
@@ -176,6 +188,7 @@ describe('RuntimeCoordinator', () => {
       badgeCount: 0,
       runningCount: 0,
       waitingApprovalCount: 0,
+      waitingInputCount: 0,
       failedCount: 0,
       interruptedCount: 0,
     });
@@ -199,6 +212,7 @@ describe('RuntimeCoordinator', () => {
       badgeCount: 1,
       runningCount: 1,
       waitingApprovalCount: 1,
+      waitingInputCount: 0,
       failedCount: 0,
       interruptedCount: 0,
     });
@@ -256,6 +270,93 @@ describe('RuntimeCoordinator', () => {
     ]);
   });
 
+  it('waits for user input and resumes with the submitted answers', async () => {
+    const conversations = new Map([['a', conversation('a')]]);
+    const coordinator = new RuntimeCoordinator(
+      host,
+      new MemoryConversationStore(conversations),
+      () => createFakeRuntime({
+        userInput: {
+          questions: [{
+            id: 'scope',
+            header: 'Scope',
+            question: 'Which scope should Windy use?',
+            options: [
+              { label: 'Current page', description: 'Only edit the active page.' },
+              { label: 'Vault', description: 'Allow related pages.' },
+            ],
+            isOther: true,
+            isSecret: false,
+          }],
+        },
+      }),
+    );
+
+    const task = coordinator.send('a', 'ask me first', 'A.md');
+    await new Promise(resolve => setImmediate(resolve));
+    const waiting = await coordinator.getSnapshot('a');
+
+    assert.equal(waiting.status, 'waiting-input');
+    assert.equal(waiting.pendingUserInput?.questions[0]?.id, 'scope');
+    assert.equal(waiting.pendingUserInput?.questions[0]?.options.length, 2);
+    assert.deepEqual(coordinator.getActivitySummary('a'), {
+      status: 'waiting-input',
+      badgeCount: 1,
+      runningCount: 1,
+      waitingApprovalCount: 0,
+      waitingInputCount: 1,
+      failedCount: 0,
+      interruptedCount: 0,
+    });
+    await assert.rejects(
+      coordinator.send('a', 'second turn', 'A.md'),
+      /already has a running turn/,
+    );
+    await assert.rejects(
+      coordinator.setModel('a', 'another-model'),
+      /Cannot change the model/,
+    );
+
+    coordinator.respondToUserInput('a', { scope: 'Current page' });
+    await task;
+
+    const completed = await coordinator.getSnapshot('a');
+    assert.equal(completed.status, 'completed');
+    assert.equal(completed.pendingUserInput, null);
+    assert.equal(
+      completed.conversation?.messages.at(-1)?.content,
+      '{"scope":"Current page"}',
+    );
+  });
+
+  it('cancels cleanly while waiting for user input', async () => {
+    const conversations = new Map([['a', conversation('a')]]);
+    const coordinator = new RuntimeCoordinator(
+      host,
+      new MemoryConversationStore(conversations),
+      () => createFakeRuntime({
+        userInput: {
+          questions: [{
+            id: 'confirm',
+            header: 'Confirm',
+            question: 'Continue?',
+            options: [{ label: 'Yes', description: '' }],
+          }],
+        },
+      }),
+    );
+
+    const task = coordinator.send('a', 'ask me first', 'A.md');
+    await new Promise(resolve => setImmediate(resolve));
+    coordinator.cancel('a');
+    await task;
+
+    const cancelled = await coordinator.getSnapshot('a');
+    assert.equal(cancelled.status, 'cancelled');
+    assert.equal(cancelled.pendingUserInput, null);
+    assert.equal(cancelled.conversation?.activeTurn, undefined);
+  });
+
   it('recovers persisted running output as interrupted and retries non-destructively', async () => {
     const gate = deferred();
     const sourceConversations = new Map([['a', conversation('a')]]);
@@ -302,6 +403,7 @@ describe('RuntimeCoordinator', () => {
       badgeCount: 1,
       runningCount: 0,
       waitingApprovalCount: 0,
+      waitingInputCount: 0,
       failedCount: 0,
       interruptedCount: 1,
     });

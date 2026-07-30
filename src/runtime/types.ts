@@ -1,10 +1,14 @@
 import type { ApprovalCallbackOptions } from '../core/runtime/types';
-import type { Conversation } from '../core/types';
+import type {
+  AskUserQuestionItem,
+  Conversation,
+} from '../core/types';
 
 export type ConversationTaskStatus =
   | 'idle'
   | 'running'
   | 'waiting-approval'
+  | 'waiting-input'
   | 'completed'
   | 'failed'
   | 'cancelled'
@@ -17,17 +21,23 @@ export interface PendingApproval {
   options?: ApprovalCallbackOptions;
 }
 
+export interface PendingUserInput {
+  questions: AskUserQuestionItem[];
+}
+
 export interface ConversationRuntimeSnapshot {
   conversation: Conversation | null;
   status: ConversationTaskStatus;
   error: string | null;
   pendingApproval: PendingApproval | null;
+  pendingUserInput: PendingUserInput | null;
 }
 
 export type RuntimeActivityStatus =
   | 'idle'
   | 'running'
   | 'waiting-approval'
+  | 'waiting-input'
   | 'completed'
   | 'failed'
   | 'interrupted';
@@ -37,6 +47,7 @@ export interface RuntimeActivitySummary {
   badgeCount: number;
   runningCount: number;
   waitingApprovalCount: number;
+  waitingInputCount: number;
   failedCount: number;
   interruptedCount: number;
 }

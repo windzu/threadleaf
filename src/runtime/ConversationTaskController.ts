@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 import type { ChatRuntime } from '../core/runtime/ChatRuntime';
 import type {
   ApprovalDecision,
+  AskUserAnswers,
+  AskUserQuestionItem,
   ChatMessage,
   Conversation,
   StreamChunk,
@@ -14,6 +16,7 @@ import type {
   ConversationRuntimeSnapshot,
   ConversationTaskStatus,
   PendingApproval,
+  PendingUserInput,
 } from './types';
 
 export class ConversationTaskController {
@@ -22,6 +25,9 @@ export class ConversationTaskController {
   private error: string | null = null;
   private pendingApproval: PendingApproval | null = null;
   private resolveApproval: ((decision: ApprovalDecision) => void) | null = null;
+  private pendingUserInput: PendingUserInput | null = null;
+  private resolveUserInput: ((answers: AskUserAnswers | null) => void) | null = null;
+  private removeUserInputAbortListener: (() => void) | null = null;
   private shuttingDown = false;
   private readonly checkpoints: TurnCheckpointManager;
 
@@ -94,6 +100,9 @@ export class ConversationTaskController {
       pendingApproval: this.pendingApproval
         ? structuredClone(this.pendingApproval)
         : null,
+      pendingUserInput: this.pendingUserInput
+        ? structuredClone(this.pendingUserInput)
+        : null,
     };
   }
 
@@ -103,7 +112,11 @@ export class ConversationTaskController {
     displayContent?: string,
     referencedPagePaths: string[] = [],
   ): Promise<void> {
-    if (this.taskStatus === 'running' || this.taskStatus === 'waiting-approval') {
+    if (
+      this.taskStatus === 'running'
+      || this.taskStatus === 'waiting-approval'
+      || this.taskStatus === 'waiting-input'
+    ) {
       throw new Error('This conversation already has a running turn.');
     }
     if (!this.conversation) {
@@ -146,6 +159,7 @@ export class ConversationTaskController {
     this.taskStatus = 'running';
     this.error = null;
     this.pendingApproval = null;
+    this.pendingUserInput = null;
     this.checkpoints.resetProgressClock();
     await this.conversations.save(conversation);
     this.runtime.syncConversationState(conversation);
@@ -209,6 +223,7 @@ export class ConversationTaskController {
       }
       this.pendingApproval = null;
       this.resolveApproval = null;
+      this.clearPendingUserInput();
       this.emit();
     }
   }
@@ -265,8 +280,26 @@ export class ConversationTaskController {
     resolve(decision);
   }
 
+  respondToUserInput(answers: AskUserAnswers): void {
+    if (!this.resolveUserInput) {
+      return;
+    }
+    const resolve = this.resolveUserInput;
+    this.clearPendingUserInput();
+    this.taskStatus = 'running';
+    if (this.conversation) {
+      this.checkpoints.updateActiveStatus(this.conversation, 'running');
+    }
+    this.emit();
+    resolve(answers);
+  }
+
   async setModel(model: string | undefined): Promise<void> {
-    if (this.taskStatus === 'running' || this.taskStatus === 'waiting-approval') {
+    if (
+      this.taskStatus === 'running'
+      || this.taskStatus === 'waiting-approval'
+      || this.taskStatus === 'waiting-input'
+    ) {
       throw new Error('Cannot change the model while a turn is running.');
     }
     if (!this.conversation) {
@@ -286,6 +319,8 @@ export class ConversationTaskController {
     this.resolveApproval?.('cancel');
     this.resolveApproval = null;
     this.pendingApproval = null;
+    this.resolveUserInput?.(null);
+    this.clearPendingUserInput();
     this.runtime.cancel();
     this.taskStatus = 'cancelled';
     if (this.conversation) {
@@ -299,6 +334,8 @@ export class ConversationTaskController {
   cleanup(): void {
     this.shuttingDown = true;
     this.resolveApproval?.('cancel');
+    this.resolveUserInput?.(null);
+    this.clearPendingUserInput();
     if (this.conversation) {
       this.checkpoints.interruptAndPersist(this.conversation);
     }
@@ -331,7 +368,42 @@ export class ConversationTaskController {
         this.emit();
       });
     });
-    this.runtime.setAskUserQuestionCallback(async () => ({}));
+    this.runtime.setAskUserQuestionCallback((input, signal) => {
+      const questions = normalizeUserInputQuestions(input);
+      if (questions.length === 0 || signal?.aborted) {
+        return Promise.resolve(null);
+      }
+      return new Promise<AskUserAnswers | null>(resolve => {
+        this.pendingUserInput = { questions };
+        this.resolveUserInput = resolve;
+        this.taskStatus = 'waiting-input';
+        if (this.conversation) {
+          this.checkpoints.updateActiveStatus(
+            this.conversation,
+            'waiting-input',
+          );
+        }
+        if (signal) {
+          const abort = (): void => {
+            const pendingResolve = this.resolveUserInput;
+            this.clearPendingUserInput();
+            if (!this.shuttingDown && this.taskStatus === 'waiting-input') {
+              this.taskStatus = 'running';
+              if (this.conversation) {
+                this.checkpoints.updateActiveStatus(this.conversation, 'running');
+              }
+            }
+            pendingResolve?.(null);
+            this.emit();
+          };
+          signal.addEventListener('abort', abort, { once: true });
+          this.removeUserInputAbortListener = () => {
+            signal.removeEventListener('abort', abort);
+          };
+        }
+        this.emit();
+      });
+    });
   }
 
   private applyChunk(
@@ -411,4 +483,60 @@ export class ConversationTaskController {
   private emit(): void {
     this.onChange(this.snapshot());
   }
+
+  private clearPendingUserInput(): void {
+    this.removeUserInputAbortListener?.();
+    this.removeUserInputAbortListener = null;
+    this.pendingUserInput = null;
+    this.resolveUserInput = null;
+  }
+}
+
+function normalizeUserInputQuestions(
+  input: Record<string, unknown>,
+): AskUserQuestionItem[] {
+  const questions = Array.isArray(input.questions) ? input.questions : [];
+  return questions.flatMap((entry, index) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      return [];
+    }
+    const question = entry as Record<string, unknown>;
+    const text = typeof question.question === 'string'
+      ? question.question.trim()
+      : '';
+    if (!text) {
+      return [];
+    }
+    const options = Array.isArray(question.options)
+      ? question.options.flatMap(option => {
+          if (!option || typeof option !== 'object' || Array.isArray(option)) {
+            return [];
+          }
+          const item = option as Record<string, unknown>;
+          const label = typeof item.label === 'string' ? item.label.trim() : '';
+          if (!label) {
+            return [];
+          }
+          return [{
+            label,
+            description: typeof item.description === 'string'
+              ? item.description
+              : '',
+          }];
+        })
+      : [];
+    return [{
+      question: text,
+      id: typeof question.id === 'string' && question.id.trim()
+        ? question.id
+        : undefined,
+      header: typeof question.header === 'string' && question.header.trim()
+        ? question.header
+        : `Q${index + 1}`,
+      options,
+      multiSelect: Boolean(question.multiSelect ?? question.multi_select),
+      isOther: question.isOther !== false,
+      isSecret: question.isSecret === true,
+    }];
+  });
 }

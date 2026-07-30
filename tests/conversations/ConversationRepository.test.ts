@@ -114,6 +114,32 @@ describe('ConversationRepository', () => {
     );
   });
 
+  it('accepts a persisted turn that was waiting for user input', async () => {
+    const path = '.windy/conversations/waiting-input.json';
+    const stored = conversation('waiting-input');
+    stored.activeTurn = {
+      status: 'waiting-input',
+      userMessageId: 'user-1',
+      assistantMessageId: 'assistant-1',
+      primaryPagePath: 'A.md',
+      startedAt: 1,
+      updatedAt: 2,
+    };
+    const repository = new ConversationRepository(
+      new MemoryJsonFileAdapter({
+        [path]: JSON.stringify({
+          version: CONVERSATION_DOCUMENT_VERSION,
+          conversation: stored,
+        }),
+      }),
+    );
+
+    assert.equal(
+      (await repository.load('waiting-input'))?.activeTurn?.status,
+      'waiting-input',
+    );
+  });
+
   it('repairs duplicate tool events while preserving a terminal result', async () => {
     const path = '.windy/conversations/duplicate-tools.json';
     const stored = conversation('duplicate-tools');

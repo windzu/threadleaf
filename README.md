@@ -123,13 +123,13 @@ Implemented:
 - one shared Codex app-server process with per-conversation thread routing;
 - background-safe runtimes that are not cancelled by page navigation;
 - interrupted-turn recovery and durable partial output.
+- inline user-question forms that pause and resume the owning task.
 
 Still in progress:
 
 - specialized file diff and command output rendering;
-- ask-user forms and richer approval choices;
+- richer approval choices;
 - a user-facing settings screen;
-- tool-call deduplication across every Codex model variant;
 - split-pane, pop-out-window, and failure-recovery hardening.
 
 The first public beta focuses on macOS desktop and a single Obsidian Vault.

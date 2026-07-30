@@ -67,9 +67,9 @@ runtime accepts only notifications matching its current `threadId` and
   conversation file is definitely missing. Read failures and unreferenced
   conversation files are preserved for recovery instead of being deleted.
 - A non-terminal turn persists its user and assistant message ids, source page,
-  status, and timestamps. On plugin restart, `running` and `waiting-approval`
-  states become `interrupted`; partial assistant output remains visible and the
-  lost live turn is never presented as still running.
+  status, and timestamps. On plugin restart, `running`, `waiting-approval`,
+  and `waiting-input` states become `interrupted`; partial assistant output
+  remains visible and the lost live turn is never presented as still running.
 - An explicit model selection belongs to the conversation. An absent
   `selectedModel` means `Auto` and resolves through the current Windy
   default when a turn starts.
