@@ -52,6 +52,8 @@ export interface ChatRuntime {
     listener: (commands: readonly SlashCommand[]) => void,
   ): () => void;
   getAuxiliaryModel?(): string | null;
+  /** Updates the provider-native user-facing session title when supported. */
+  setSessionTitle?(title: string): Promise<void>;
   cleanup(): void;
   previewRewind?(
     userMessageId: string,

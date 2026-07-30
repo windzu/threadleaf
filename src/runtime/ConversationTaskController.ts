@@ -204,9 +204,23 @@ export class ConversationTaskController {
       delete conversation.activeTurn;
       await this.conversations.save(conversation);
     } finally {
+      if (!this.shuttingDown) {
+        await this.syncSessionTitle(conversation.title);
+      }
       this.pendingApproval = null;
       this.resolveApproval = null;
       this.emit();
+    }
+  }
+
+  private async syncSessionTitle(title: string): Promise<void> {
+    if (!this.runtime.setSessionTitle || title === 'New conversation') {
+      return;
+    }
+    try {
+      await this.runtime.setSessionTitle(title);
+    } catch {
+      // Provider metadata must never turn a completed response into a failed turn.
     }
   }
 

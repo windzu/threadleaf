@@ -58,6 +58,8 @@ function createFakeRuntime(options: {
   approval?: boolean;
   partialBeforeGate?: string;
   preparedRequests?: ChatTurnRequest[];
+  sessionTitles?: string[];
+  sessionTitleError?: Error;
 }): ChatRuntime {
   let conversationId = '';
   let approvalCallback: ApprovalCallback | null = null;
@@ -106,6 +108,12 @@ function createFakeRuntime(options: {
     },
     consumeSessionInvalidation(): boolean {
       return false;
+    },
+    async setSessionTitle(title: string): Promise<void> {
+      if (options.sessionTitleError) {
+        throw options.sessionTitleError;
+      }
+      options.sessionTitles?.push(title);
     },
     cancel(): void {
       cancelled = true;
@@ -386,10 +394,11 @@ describe('RuntimeCoordinator', () => {
   it('names a new conversation from its first request', async () => {
     const conversations = new Map([['a', conversation('a')]]);
     conversations.get('a')!.title = 'New conversation';
+    const sessionTitles: string[] = [];
     const coordinator = new RuntimeCoordinator(
       host,
       new MemoryConversationStore(conversations),
-      () => createFakeRuntime({}),
+      () => createFakeRuntime({ sessionTitles }),
     );
 
     await coordinator.send(
@@ -402,6 +411,28 @@ describe('RuntimeCoordinator', () => {
       (await coordinator.getSnapshot('a')).conversation?.title,
       'Explain the page conversation architecture',
     );
+    assert.deepEqual(sessionTitles, [
+      'Explain the page conversation architecture',
+    ]);
+  });
+
+  it('does not fail a completed turn when session title sync fails', async () => {
+    const conversations = new Map([['a', conversation('a')]]);
+    conversations.get('a')!.title = 'New conversation';
+    const coordinator = new RuntimeCoordinator(
+      host,
+      new MemoryConversationStore(conversations),
+      () => createFakeRuntime({
+        sessionTitleError: new Error('title service unavailable'),
+      }),
+    );
+
+    await coordinator.send('a', 'Keep the completed response', 'A.md');
+
+    const snapshot = await coordinator.getSnapshot('a');
+    assert.equal(snapshot.status, 'completed');
+    assert.equal(snapshot.error, null);
+    assert.equal(snapshot.conversation?.messages.at(-1)?.content, 'response:a');
   });
 
   it('persists and forwards additional page references with the turn', async () => {

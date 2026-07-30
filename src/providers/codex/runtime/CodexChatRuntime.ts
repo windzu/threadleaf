@@ -58,6 +58,7 @@ import type {
   SkillsListResult,
   ThreadCompactStartResult,
   ThreadForkResult,
+  ThreadNameSetParams,
   ThreadResumeResult,
   ThreadRollbackResult,
   ThreadStartResult,
@@ -903,6 +904,22 @@ export class CodexChatRuntime implements ChatRuntime {
 
   getAuxiliaryModel(): string | null {
     return this.resolveModel() ?? null;
+  }
+
+  async setSessionTitle(title: string): Promise<void> {
+    const name = title.trim();
+    const threadId = this.session.getThreadId();
+    if (!name || !threadId) {
+      return;
+    }
+    if (!this.transport) {
+      await this.ensureReady();
+    }
+    const params: ThreadNameSetParams = { threadId, name };
+    await this.transport!.request<Record<string, never>>(
+      'thread/name/set',
+      params,
+    );
   }
 
   private setCurrentConversationModel(model: unknown): void {

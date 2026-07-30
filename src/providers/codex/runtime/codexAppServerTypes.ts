@@ -417,6 +417,11 @@ export interface ThreadStartResult {
   reasoningEffort: string;
 }
 
+export interface ThreadNameSetParams {
+  threadId: string;
+  name: string;
+}
+
 export type SandboxPolicy =
   | { type: 'dangerFullAccess' }
   | {
