@@ -31,6 +31,10 @@ import { renderWindyComposer } from './WindyComposer';
 import { WINDY_NAV_ICON } from './icons';
 import { MessageListRenderer } from './MessageListRenderer';
 import {
+  captureMessageScrollPosition,
+  restoreMessageScrollPosition,
+} from './messageScrollPosition';
+import {
   type ComposerPageReference,
   getReferencedPagePaths,
 } from './pageReferenceMentions';
@@ -143,13 +147,7 @@ export class WindyView extends ItemView {
     const previousMessages = this.contentEl.querySelector<HTMLElement>(
       '.windy-view__messages',
     );
-    const previousScrollTop = previousMessages?.scrollTop ?? 0;
-    const stickToBottom = !previousMessages || (
-      previousMessages.scrollHeight
-      - previousMessages.scrollTop
-      - previousMessages.clientHeight
-      < 72
-    );
+    const scrollPosition = captureMessageScrollPosition(previousMessages);
     this.disposeMessageRenderer();
     this.contentEl.empty();
     this.contentEl.addClass('windy-view');
@@ -192,19 +190,19 @@ export class WindyView extends ItemView {
     this.messageRenderer = renderer;
     this.addChild(renderer);
     const renderGeneration = ++this.messageRenderGeneration;
-    void renderer.render(
+    const renderMessages = renderer.render(
       messages,
       snapshot?.conversation?.messages ?? [],
       page.path,
       snapshot?.status ?? 'idle',
-    ).then(() => {
+    );
+    restoreMessageScrollPosition(messages, scrollPosition);
+    void renderMessages.then(() => {
       if (renderGeneration !== this.messageRenderGeneration) {
         return;
       }
       messages.ownerDocument.defaultView?.requestAnimationFrame(() => {
-        messages.scrollTop = stickToBottom
-          ? messages.scrollHeight
-          : previousScrollTop;
+        restoreMessageScrollPosition(messages, scrollPosition);
       });
     });
 
