@@ -174,7 +174,10 @@ export class ConversationTaskController {
       for await (const chunk of this.runtime.query(
         turn,
         conversation.messages.slice(0, -2),
-        { model: conversation.selectedModel },
+        {
+          model: conversation.selectedModel,
+          reasoningEffort: conversation.selectedReasoningEffort,
+        },
       )) {
         if (this.shuttingDown) {
           break;
@@ -305,10 +308,35 @@ export class ConversationTaskController {
     if (!this.conversation) {
       throw new Error(`Conversation "${this.conversationId}" does not exist.`);
     }
+    const modelChanged = this.conversation.selectedModel !== model;
     if (model) {
       this.conversation.selectedModel = model;
     } else {
       delete this.conversation.selectedModel;
+    }
+    if (modelChanged) {
+      delete this.conversation.selectedReasoningEffort;
+    }
+    await this.conversations.save(this.conversation);
+    this.runtime.syncConversationState(this.conversation);
+    this.emit();
+  }
+
+  async setReasoningEffort(reasoningEffort: string | undefined): Promise<void> {
+    if (
+      this.taskStatus === 'running'
+      || this.taskStatus === 'waiting-approval'
+      || this.taskStatus === 'waiting-input'
+    ) {
+      throw new Error('Cannot change reasoning effort while a turn is running.');
+    }
+    if (!this.conversation) {
+      throw new Error(`Conversation "${this.conversationId}" does not exist.`);
+    }
+    if (reasoningEffort) {
+      this.conversation.selectedReasoningEffort = reasoningEffort;
+    } else {
+      delete this.conversation.selectedReasoningEffort;
     }
     await this.conversations.save(this.conversation);
     this.runtime.syncConversationState(this.conversation);

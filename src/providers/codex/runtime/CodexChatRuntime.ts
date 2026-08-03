@@ -503,9 +503,12 @@ export class CodexChatRuntime implements ChatRuntime {
         this.registerActiveInputBundle(turnInputBundle);
 
         // Start turn
-        const selectedEffort = typeof providerSettings.effortLevel === 'string'
-          ? providerSettings.effortLevel.trim()
-          : '';
+        const selectedEffort = queryOptions?.reasoningEffort?.trim()
+          || (
+            typeof providerSettings.effortLevel === 'string'
+              ? providerSettings.effortLevel.trim()
+              : ''
+          );
         const effort = selectedEffort || 'medium';
         const resolvedModel = model;
         const isPlanMode = providerSettings.permissionMode === 'plan';

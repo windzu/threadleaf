@@ -2,7 +2,9 @@ import type { WindySettings } from '../../core/types';
 import type {
   ConversationModelOption,
   ConversationModelService,
+  ConversationReasoningEffortOption,
 } from '../../models/types';
+import { formatReasoningValueLabel } from '../../core/providers/reasoning';
 import { formatCodexModelLabel } from './types/models';
 import type {
   AppServerModel,
@@ -16,6 +18,10 @@ export interface ModelCatalogGateway {
 
 export interface ConversationModelTarget {
   setModel(conversationId: string, model: string | undefined): Promise<void>;
+  setReasoningEffort(
+    conversationId: string,
+    reasoningEffort: string | undefined,
+  ): Promise<void>;
 }
 
 export class CodexConversationModelService implements ConversationModelService {
@@ -57,6 +63,36 @@ export class CodexConversationModelService implements ConversationModelService {
     return `Uses the Windy default (${formatCodexModelLabel(this.settings.model)}).`;
   }
 
+  async getReasoningOptions(
+    selectedModel: string | undefined,
+  ): Promise<ConversationReasoningEffortOption[]> {
+    const model = this.resolveModel(selectedModel, await this.getOptions());
+    return structuredClone(model?.reasoningEfforts ?? []);
+  }
+
+  getReasoningSelectionLabel(
+    selectedModel: string | undefined,
+    selectedReasoningEffort: string | undefined,
+    options: ConversationModelOption[] = this.options ?? [],
+  ): string {
+    const effort = selectedReasoningEffort
+      ?? this.resolveModel(selectedModel, options)?.defaultReasoningEffort
+      ?? this.settings.effortLevel
+      ?? 'medium';
+    return formatReasoningValueLabel(effort);
+  }
+
+  getReasoningAutoDescription(
+    selectedModel: string | undefined,
+    options: ConversationModelOption[] = this.options ?? [],
+  ): string {
+    const model = this.resolveModel(selectedModel, options);
+    const effort = model?.defaultReasoningEffort
+      ?? this.settings.effortLevel
+      ?? 'medium';
+    return `Uses the model default (${formatReasoningValueLabel(effort)}).`;
+  }
+
   async select(
     conversationId: string,
     model: string | null,
@@ -68,6 +104,25 @@ export class CodexConversationModelService implements ConversationModelService {
       }
     }
     await this.target.setModel(conversationId, model ?? undefined);
+  }
+
+  async selectReasoningEffort(
+    conversationId: string,
+    selectedModel: string | undefined,
+    reasoningEffort: string | null,
+  ): Promise<void> {
+    if (reasoningEffort !== null) {
+      const options = await this.getReasoningOptions(selectedModel);
+      if (!options.some(option => option.value === reasoningEffort)) {
+        throw new Error(
+          `Reasoning effort "${reasoningEffort}" is not available for this model.`,
+        );
+      }
+    }
+    await this.target.setReasoningEffort(
+      conversationId,
+      reasoningEffort ?? undefined,
+    );
   }
 
   private async loadOptions(): Promise<ConversationModelOption[]> {
@@ -93,7 +148,25 @@ export class CodexConversationModelService implements ConversationModelService {
         label: formatCodexModelLabel(model.model || model.id),
         description: model.description,
         isDefault: model.isDefault,
+        reasoningEfforts: model.supportedReasoningEfforts.map(option => ({
+          value: option.reasoningEffort,
+          label: formatReasoningValueLabel(option.reasoningEffort),
+          description: option.description,
+          isDefault: option.reasoningEffort === model.defaultReasoningEffort,
+        })),
+        defaultReasoningEffort: model.defaultReasoningEffort,
       }));
     return this.options;
+  }
+
+  private resolveModel(
+    selectedModel: string | undefined,
+    options: ConversationModelOption[],
+  ): ConversationModelOption | null {
+    const modelId = selectedModel ?? this.settings.model;
+    return options.find(option => option.value === modelId)
+      ?? options.find(option => option.isDefault)
+      ?? options[0]
+      ?? null;
   }
 }

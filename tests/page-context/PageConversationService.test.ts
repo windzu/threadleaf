@@ -95,9 +95,13 @@ describe('PageConversationService', () => {
     });
     const associations: Array<[string, string]> = [];
     const repository: PageConversationRepository = {
-      async create(selectedModel?: string): Promise<Conversation> {
+      async create(
+        selectedModel?: string,
+        selectedReasoningEffort?: string,
+      ): Promise<Conversation> {
         createCount += 1;
         assert.equal(selectedModel, 'test-model');
+        assert.equal(selectedReasoningEffort, 'high');
         await creationGate;
         return conversation('created', 30);
       },
@@ -119,8 +123,16 @@ describe('PageConversationService', () => {
       repository,
     );
 
-    const first = service.ensureConversationForPage('Origin.md', 'test-model');
-    const second = service.ensureConversationForPage('Origin.md', 'test-model');
+    const first = service.ensureConversationForPage(
+      'Origin.md',
+      'test-model',
+      'high',
+    );
+    const second = service.ensureConversationForPage(
+      'Origin.md',
+      'test-model',
+      'high',
+    );
     releaseCreation();
 
     assert.deepEqual(await Promise.all([first, second]), ['created', 'created']);

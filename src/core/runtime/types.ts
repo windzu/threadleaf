@@ -65,6 +65,7 @@ export interface PreparedChatTurn {
 export interface ChatRuntimeQueryOptions {
   allowedTools?: string[];
   model?: string;
+  reasoningEffort?: string;
   mcpMentions?: Set<string>;
   enabledMcpServers?: Set<string>;
   forceColdStart?: boolean;
@@ -79,7 +80,7 @@ export interface ChatRuntimeEnsureReadyOptions {
 
 export type ChatRuntimeConversationState = Pick<
   Conversation,
-  'sessionId' | 'providerState' | 'selectedModel'
+  'sessionId' | 'providerState' | 'selectedModel' | 'selectedReasoningEffort'
 > & Partial<Pick<Conversation, 'id'>>;
 
 export interface SessionUpdateResult {

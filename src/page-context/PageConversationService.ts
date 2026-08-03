@@ -5,7 +5,10 @@ import type {
 import type { PageConversationRoute } from './PageConversationRouter';
 
 export interface PageConversationRepository {
-  create(selectedModel?: string): Promise<Conversation>;
+  create(
+    selectedModel?: string,
+    selectedReasoningEffort?: string,
+  ): Promise<Conversation>;
   load(conversationId: string): Promise<Conversation | null>;
 }
 
@@ -101,10 +104,15 @@ export class PageConversationService {
   async ensureConversationForPage(
     pagePath: string,
     selectedModel?: string,
+    selectedReasoningEffort?: string,
   ): Promise<string> {
     let flight = this.creationFlights.get(pagePath);
     if (!flight) {
-      flight = this.createConversationForPage(pagePath, selectedModel);
+      flight = this.createConversationForPage(
+        pagePath,
+        selectedModel,
+        selectedReasoningEffort,
+      );
       this.creationFlights.set(pagePath, flight);
     }
     try {
@@ -119,8 +127,12 @@ export class PageConversationService {
   private async createConversationForPage(
     pagePath: string,
     selectedModel?: string,
+    selectedReasoningEffort?: string,
   ): Promise<string> {
-    const conversation = await this.conversations.create(selectedModel);
+    const conversation = await this.conversations.create(
+      selectedModel,
+      selectedReasoningEffort,
+    );
     await this.router.associateConversationForPage(pagePath, conversation.id);
     return conversation.id;
   }

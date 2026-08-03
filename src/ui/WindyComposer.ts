@@ -8,6 +8,7 @@ import type {
 } from '../page-context/PageReferenceService';
 import type { ConversationTaskStatus } from '../runtime/RuntimeCoordinator';
 import { renderModelPickerControl } from './ModelPickerControl';
+import { renderReasoningEffortPickerControl } from './ReasoningEffortPickerControl';
 import { renderPageReferenceComposer } from './PageReferenceComposer';
 import type { ComposerPageReference } from './pageReferenceMentions';
 
@@ -16,12 +17,14 @@ export interface WindyComposerOptions {
   text: string;
   references: ComposerPageReference[];
   selectedModel: string | undefined;
+  selectedReasoningEffort: string | undefined;
   status: ConversationTaskStatus;
   permissionMode: PermissionMode;
   models: ConversationModelService;
   referenceService: PageReferenceService;
   onDraftChange: (text: string, references: ComposerPageReference[]) => void;
   onModelSelect: (model: string | null) => Promise<void>;
+  onReasoningEffortSelect: (reasoningEffort: string | null) => Promise<void>;
   onPermissionModeSelect: (mode: PermissionMode) => Promise<void>;
   onSubmit: (text: string) => void;
   onStop: () => void;
@@ -62,6 +65,13 @@ export function renderWindyComposer(
     disabled: isRunning,
     models: options.models,
     onSelect: options.onModelSelect,
+  });
+  renderReasoningEffortPickerControl(rightActions, {
+    selectedModel: options.selectedModel,
+    selectedReasoningEffort: options.selectedReasoningEffort,
+    disabled: isRunning,
+    models: options.models,
+    onSelect: options.onReasoningEffortSelect,
   });
   renderYoloControl(rightActions, options, isRunning);
   const sendButton = rightActions.createEl('button', {

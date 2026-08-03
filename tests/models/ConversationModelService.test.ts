@@ -22,7 +22,20 @@ function model(
     displayName: id,
     description: `${id} description`,
     hidden: false,
-    supportedReasoningEfforts: [],
+    supportedReasoningEfforts: [
+      {
+        reasoningEffort: 'low',
+        description: 'Faster responses',
+      },
+      {
+        reasoningEffort: 'medium',
+        description: 'Balanced reasoning',
+      },
+      {
+        reasoningEffort: 'high',
+        description: 'Deeper reasoning',
+      },
+    ],
     defaultReasoningEffort: 'medium',
     isDefault: false,
     ...options,
@@ -59,6 +72,7 @@ describe('ConversationModelService', () => {
     };
     const target: ConversationModelTarget = {
       async setModel(): Promise<void> {},
+      async setReasoningEffort(): Promise<void> {},
     };
     const service = new CodexConversationModelService(
       gateway,
@@ -76,6 +90,18 @@ describe('ConversationModelService', () => {
       [
         ['gpt-5.6-sol', 'GPT-5.6 Sol'],
         ['gpt-5.6-terra', 'GPT-5.6 Terra'],
+      ],
+    );
+    assert.deepEqual(
+      first[0]?.reasoningEfforts.map(option => [
+        option.value,
+        option.label,
+        option.isDefault,
+      ]),
+      [
+        ['low', 'Low', false],
+        ['medium', 'Medium', true],
+        ['high', 'High', false],
       ],
     );
     assert.deepEqual(second, first);
@@ -103,6 +129,7 @@ describe('ConversationModelService', () => {
       ): Promise<void> {
         updates.push([conversationId, selectedModel]);
       },
+      async setReasoningEffort(): Promise<void> {},
     };
     const service = new CodexConversationModelService(
       gateway,
@@ -123,6 +150,51 @@ describe('ConversationModelService', () => {
     );
   });
 
+  it('uses model-scoped reasoning efforts and persists an explicit selection', async () => {
+    const updates: Array<[string, string | undefined]> = [];
+    const service = new CodexConversationModelService(
+      {
+        async ensureReady(): Promise<void> {},
+        async request<T>(): Promise<T> {
+          return {
+            data: [model('gpt-5.6-sol')],
+            nextCursor: null,
+          } as T;
+        },
+      },
+      {
+        async setModel(): Promise<void> {},
+        async setReasoningEffort(conversationId, reasoningEffort): Promise<void> {
+          updates.push([conversationId, reasoningEffort]);
+        },
+      },
+      structuredClone(DEFAULT_WINDY_SETTINGS),
+    );
+
+    const efforts = await service.getReasoningOptions('gpt-5.6-sol');
+    assert.deepEqual(efforts.map(option => option.value), [
+      'low',
+      'medium',
+      'high',
+    ]);
+    assert.equal(
+      service.getReasoningSelectionLabel('gpt-5.6-sol', undefined),
+      'Medium',
+    );
+
+    await service.selectReasoningEffort('conversation-1', 'gpt-5.6-sol', 'high');
+    await service.selectReasoningEffort('conversation-1', 'gpt-5.6-sol', null);
+
+    assert.deepEqual(updates, [
+      ['conversation-1', 'high'],
+      ['conversation-1', undefined],
+    ]);
+    await assert.rejects(
+      service.selectReasoningEffort('conversation-1', 'gpt-5.6-sol', 'xhigh'),
+      /not available for this model/,
+    );
+  });
+
   it('labels an unset selection as Auto with the configured default', () => {
     const service = new CodexConversationModelService(
       {
@@ -133,6 +205,7 @@ describe('ConversationModelService', () => {
       },
       {
         async setModel(): Promise<void> {},
+        async setReasoningEffort(): Promise<void> {},
       },
       structuredClone(DEFAULT_WINDY_SETTINGS),
     );

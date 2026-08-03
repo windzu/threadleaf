@@ -93,6 +93,8 @@ export interface Conversation {
   sessionId: string | null;
   /** Conversation-owned model selection. Missing values are migrated lazily. */
   selectedModel?: string;
+  /** Conversation-owned reasoning effort. Missing values use the model default. */
+  selectedReasoningEffort?: string;
   /** Opaque provider-owned state bag (session tracking, fork metadata, etc.). */
   providerState?: Record<string, unknown>;
   messages: ChatMessage[];
@@ -141,6 +143,8 @@ export interface SessionMetadata {
   sessionId?: string | null;
   /** Conversation-owned model selection. */
   selectedModel?: string;
+  /** Conversation-owned reasoning effort. */
+  selectedReasoningEffort?: string;
   /** Opaque provider-owned state bag. */
   providerState?: Record<string, unknown>;
   externalContextPaths?: string[];

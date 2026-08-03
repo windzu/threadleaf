@@ -6,6 +6,7 @@ import type { ChatRuntime } from '../../src/core/runtime/ChatRuntime';
 import type {
   ApprovalCallback,
   AskUserQuestionCallback,
+  ChatRuntimeQueryOptions,
   ChatTurnRequest,
   PreparedChatTurn,
 } from '../../src/core/runtime/types';
@@ -63,6 +64,7 @@ function createFakeRuntime(options: {
   scriptedChunks?: StreamChunk[];
   sessionTitles?: string[];
   sessionTitleError?: Error;
+  queryOptions?: ChatRuntimeQueryOptions[];
 }): ChatRuntime {
   let conversationId = '';
   let approvalCallback: ApprovalCallback | null = null;
@@ -83,7 +85,12 @@ function createFakeRuntime(options: {
         mcpMentions: new Set(),
       };
     },
-    async *query(): AsyncGenerator<StreamChunk> {
+    async *query(
+      _turn: PreparedChatTurn,
+      _history: unknown,
+      queryOptions: ChatRuntimeQueryOptions,
+    ): AsyncGenerator<StreamChunk> {
+      options.queryOptions?.push(structuredClone(queryOptions));
       if (options.scriptedChunks) {
         yield* options.scriptedChunks;
         yield { type: 'done' };
@@ -541,6 +548,34 @@ describe('RuntimeCoordinator', () => {
     await coordinator.setModel('a', undefined);
     assert.equal(
       (await coordinator.getSnapshot('a')).conversation?.selectedModel,
+      undefined,
+    );
+  });
+
+  it('persists and forwards the conversation reasoning effort', async () => {
+    const queryOptions: ChatRuntimeQueryOptions[] = [];
+    const conversations = new Map([['a', conversation('a')]]);
+    const coordinator = new RuntimeCoordinator(
+      host,
+      new MemoryConversationStore(conversations),
+      () => createFakeRuntime({ queryOptions }),
+    );
+
+    await coordinator.setReasoningEffort('a', 'high');
+    assert.equal(
+      (await coordinator.getSnapshot('a')).conversation?.selectedReasoningEffort,
+      'high',
+    );
+
+    await coordinator.send('a', 'test', 'A.md');
+    assert.deepEqual(queryOptions, [{
+      model: 'test-model',
+      reasoningEffort: 'high',
+    }]);
+
+    await coordinator.setModel('a', 'another-model');
+    assert.equal(
+      (await coordinator.getSnapshot('a')).conversation?.selectedReasoningEffort,
       undefined,
     );
   });
