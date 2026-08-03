@@ -157,6 +157,14 @@ export class RuntimeCoordinator {
     await (await this.ensureTask(conversationId)).setModel(model);
   }
 
+  async setReasoningEffort(
+    conversationId: string,
+    reasoningEffort: string | undefined,
+  ): Promise<void> {
+    await (await this.ensureTask(conversationId))
+      .setReasoningEffort(reasoningEffort);
+  }
+
   cleanup(): void {
     this.shuttingDown = true;
     for (const task of this.tasks.values()) {

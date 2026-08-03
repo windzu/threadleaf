@@ -365,6 +365,8 @@
 .windy-message__content {
   line-height: var(--line-height-normal);
   overflow-wrap: anywhere;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .windy-message__content--plain {
@@ -936,7 +938,8 @@
   }
 }
 
-.windy-view__model-trigger {
+.windy-view__model-trigger,
+.windy-view__effort-trigger {
   align-items: center;
   border-radius: 8px;
   display: inline-flex;
@@ -947,18 +950,21 @@
   width: auto;
 }
 
-.windy-view__model-icon {
+.windy-view__model-icon,
+.windy-view__effort-icon {
   color: var(--text-muted);
   display: flex;
   flex: 0 0 auto;
 }
 
-.windy-view__model-icon svg {
+.windy-view__model-icon svg,
+.windy-view__effort-icon svg {
   height: var(--icon-xs);
   width: var(--icon-xs);
 }
 
-.windy-view__model-label {
+.windy-view__model-label,
+.windy-view__effort-label {
   font-size: var(--font-ui-small);
   font-weight: var(--font-medium);
   max-width: min(9rem, 30vw);
@@ -967,7 +973,8 @@
   white-space: nowrap;
 }
 
-.windy-view__model-trigger.is-loading {
+.windy-view__model-trigger.is-loading,
+.windy-view__effort-trigger.is-loading {
   color: var(--text-muted);
 }
 

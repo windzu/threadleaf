@@ -45,6 +45,7 @@ interface ComposerDraft {
   text: string;
   references: ComposerPageReference[];
   selectedModel?: string;
+  selectedReasoningEffort?: string;
 }
 
 export class WindyView extends ItemView {
@@ -235,6 +236,9 @@ export class WindyView extends ItemView {
       selectedModel: isDraft
         ? composerDraft.selectedModel
         : snapshot.conversation?.selectedModel,
+      selectedReasoningEffort: isDraft
+        ? composerDraft.selectedReasoningEffort
+        : snapshot.conversation?.selectedReasoningEffort,
       status,
       permissionMode: this.permissionModes.getMode(),
       models: this.conversationModels,
@@ -245,11 +249,30 @@ export class WindyView extends ItemView {
       },
       onModelSelect: async model => {
         if (!snapshot?.conversation) {
-          composerDraft.selectedModel = model ?? undefined;
+          const selectedModel = model ?? undefined;
+          if (composerDraft.selectedModel !== selectedModel) {
+            delete composerDraft.selectedReasoningEffort;
+          }
+          composerDraft.selectedModel = selectedModel;
           this.renderConversation(route, snapshot, history);
           return;
         }
         await this.conversationModels.select(snapshot.conversation.id, model);
+      },
+      onReasoningEffortSelect: async reasoningEffort => {
+        const selectedModel = isDraft
+          ? composerDraft.selectedModel
+          : snapshot?.conversation?.selectedModel;
+        if (!snapshot?.conversation) {
+          composerDraft.selectedReasoningEffort = reasoningEffort ?? undefined;
+          this.renderConversation(route, snapshot, history);
+          return;
+        }
+        await this.conversationModels.selectReasoningEffort(
+          snapshot.conversation.id,
+          selectedModel,
+          reasoningEffort,
+        );
       },
       onPermissionModeSelect: async mode => {
         await this.permissionModes.setMode(mode);
@@ -519,6 +542,7 @@ export class WindyView extends ItemView {
         ? await this.pageConversations.ensureConversationForPage(
           pagePath,
           composerDraft.selectedModel,
+          composerDraft.selectedReasoningEffort,
         )
         : route.activeConversationId;
       if (this.draftPagePath === pagePath) {

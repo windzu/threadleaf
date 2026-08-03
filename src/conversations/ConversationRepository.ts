@@ -20,7 +20,10 @@ export class ConversationRepository implements ConversationStore {
 
   constructor(private readonly adapter: JsonFileAdapter) {}
 
-  async create(selectedModel?: string): Promise<Conversation> {
+  async create(
+    selectedModel?: string,
+    selectedReasoningEffort?: string,
+  ): Promise<Conversation> {
     const now = Date.now();
     const conversation: Conversation = {
       id: randomUUID(),
@@ -30,6 +33,7 @@ export class ConversationRepository implements ConversationStore {
       updatedAt: now,
       sessionId: null,
       ...(selectedModel ? { selectedModel } : {}),
+      ...(selectedReasoningEffort ? { selectedReasoningEffort } : {}),
       messages: [],
     };
     await this.save(conversation);
