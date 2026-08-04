@@ -70,9 +70,10 @@ runtime accepts only notifications matching its current `threadId` and
   status, and timestamps. On plugin restart, `running`, `waiting-approval`,
   and `waiting-input` states become `interrupted`; partial assistant output
   remains visible and the lost live turn is never presented as still running.
-- An explicit model selection belongs to the conversation. An absent
-  `selectedModel` means `Auto` and resolves through the current Windy
-  default when a turn starts.
+- Model and reasoning selections belong to the conversation as concrete
+  values. A new draft resolves the global policies against the live Codex
+  model catalog, and its first send persists that resolved pair. Missing
+  legacy values are materialized from the previously persisted behavior.
 - Additional page references belong to the user turn that attached them. Their
   Vault paths are persisted with the message and encoded as `<context_files>`;
   note bodies are read by the agent on demand instead of being copied wholesale

@@ -82,31 +82,84 @@ is documented in [Upstream Source Boundary](docs/UPSTREAM.md).
 
 See [Project Vision](docs/VISION.md) for the product boundary and architectural direction. A Chinese version is available at [项目愿景](docs/VISION.zh-CN.md).
 
-## Install the public beta
+## Installation
 
-Windy is currently distributed through GitHub Releases and
-[BRAT](https://github.com/TfTHacker/obsidian42-brat).
+Windy is not yet listed in Obsidian's official Community Plugins directory.
+The recommended installation method is
+[BRAT](https://github.com/TfTHacker/obsidian42-brat), which installs Windy
+from its GitHub Release and can keep it updated. Manual installation is also
+supported.
 
-1. Install and enable BRAT from Obsidian's Community plugins.
-2. Run `BRAT: Add a beta plugin for testing` from the command palette.
-3. Enter `windzu/windy`.
-4. Enable Windy in Community plugins.
-
-Windy requires:
+### Requirements
 
 - Obsidian 1.7.2 or newer on desktop;
-- the `codex` CLI installed and available on the local machine;
+- [Codex CLI](https://github.com/openai/codex) installed and available as
+  `codex` on the local machine;
 - an authenticated Codex session.
 
-Windy launches `codex app-server` as a local child process. Model requests
-use the user's existing Codex authentication. Depending on the approved tool
-calls, Codex can read or modify files in the Vault and run local commands.
-Windy stores page mappings and conversations in `.windy` inside the
-Vault. It has no separate hosted service and does not add telemetry.
+Run `codex --version` to confirm the CLI installation. Run
+`codex login` to sign in with ChatGPT, then use `codex login status` to verify
+the active session. API-key authentication supported by Codex CLI also works.
+
+### Install with BRAT (recommended)
+
+1. In Obsidian, open **Settings → Community plugins → Browse**.
+2. Install and enable **BRAT**.
+3. Open the command palette and run
+   **BRAT: Plugins: Add a beta plugin for testing (with or without version)**.
+4. Enter `windzu/windy` as the GitHub repository.
+5. Select **Latest version** and add the plugin.
+6. Open **Settings → Community plugins** and enable **Windy** if BRAT did not
+   enable it automatically.
+
+BRAT tracks the repository and can install future Windy releases without
+manually replacing plugin files.
+
+### Install manually
+
+1. Open the [latest Windy release](https://github.com/windzu/windy/releases/latest).
+2. Download `main.js`, `manifest.json`, and `styles.css` from **Assets**.
+3. Create `<vault>/.obsidian/plugins/windy/` inside the target Vault.
+4. Copy all three files into that directory.
+5. Restart Obsidian, then enable **Windy** under
+   **Settings → Community plugins**.
+
+To update a manual installation, download the three assets from the new
+release, replace the existing files, and restart Obsidian.
+
+## First use
+
+1. Open a Markdown or Bases page in Obsidian.
+2. Click the floating Windy button in the lower-right corner. Windy opens in
+   the configured sidebar or tab and uses the active page as primary context.
+3. Check the concrete model and reasoning effort shown below the composer.
+   Set defaults for future conversations under **Settings → Windy**.
+4. Enter a request and send it. Use `@` to reference another page, or use the
+   plus button or drag and drop to attach local files.
+5. Switch pages normally. Windy restores each page's active conversation and
+   keeps background work running. Use the conversation menu to start or return
+   to another conversation for the same page.
+
+The **YOLO** composer control disables approval prompts and gives Codex full
+local execution access. Leave it off unless the task and environment are
+trusted.
+
+## Data, permissions, and privacy
+
+Windy launches `codex app-server` as a local child process and uses the
+existing Codex CLI authentication. Depending on the selected permission mode
+and approved tool calls, Codex can read or modify files in the Vault and run
+local commands.
+
+Windy stores page mappings and conversations in `.windy` inside the Vault.
+Settings are stored in Obsidian's plugin data. Attached files remain in their
+original locations; Windy stores path references and metadata rather than
+copying them into the Vault. Windy has no separate hosted service and does not
+add telemetry.
 
 ## Status
 
-Version 0.3.0 is the current Windy public beta.
+The latest Windy public beta is published through GitHub Releases.
 
 Implemented:
 
@@ -118,12 +171,15 @@ Implemented:
 - mapping migration after file or folder renames;
 - page-scoped conversation history and lazy first-send creation;
 - conversation-level model discovery and selection;
+- global new-conversation model and reasoning defaults in Windy settings;
 - rich inline page mentions that preserve exact Codex context paths;
+- unrestricted local-file attachments with native image input;
 - native Markdown, code, reasoning, and tool-status rendering;
 - Codex app-server conversations, streaming, tool status, cancellation, and approvals;
 - optional YOLO execution mode with an explicit in-composer control;
 - one shared Codex app-server process with per-conversation thread routing;
 - background-safe runtimes that are not cancelled by page navigation;
+- independent scroll restoration for each conversation;
 - interrupted-turn recovery and durable partial output;
 - reconciliation for repeated and stale tool events;
 - inline user-question forms that pause and resume the owning task.
@@ -132,7 +188,6 @@ Still in progress:
 
 - specialized file diff and command output rendering;
 - richer approval choices;
-- a user-facing settings screen;
 - split-pane, pop-out-window, and failure-recovery hardening.
 
 The first public beta focuses on macOS desktop and a single Obsidian Vault.
