@@ -47,10 +47,8 @@ export class TurnCheckpointManager {
     if (!conversation.activeTurn) {
       return false;
     }
-    if (conversation.activeTurn.status !== 'interrupted') {
-      this.markInterrupted(conversation);
-      await this.conversations.save(conversation);
-    }
+    this.markInterrupted(conversation);
+    await this.conversations.save(conversation);
     return true;
   }
 
@@ -89,6 +87,11 @@ export class TurnCheckpointManager {
     );
     if (assistantMessage) {
       assistantMessage.interruptedAt = interruptedAt;
+      assistantMessage.turnStatus = 'interrupted';
+      assistantMessage.durationSeconds ??= Math.max(
+        0,
+        Math.round((interruptedAt - activeTurn.startedAt) / 1000),
+      );
       for (const toolCall of assistantMessage.toolCalls ?? []) {
         if (toolCall.status === 'running') {
           toolCall.status = 'blocked';

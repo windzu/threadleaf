@@ -205,23 +205,38 @@ export class ConversationTaskController {
         sessionInvalidated: this.runtime.consumeSessionInvalidation(),
       });
       Object.assign(conversation, sessionUpdates.updates);
-      conversation.lastResponseAt = this.now();
+      const completedAt = this.now();
+      conversation.lastResponseAt = completedAt;
+      if (!this.isCancelled()) {
+        this.taskStatus = this.taskStatus === 'failed' ? 'failed' : 'completed';
+        this.completeAssistantTurn(
+          assistantMessage,
+          startedAt,
+          completedAt,
+          this.taskStatus,
+        );
+      }
       delete conversation.activeTurn;
       await this.conversations.save(conversation);
-      if (
-        !(['failed', 'cancelled'] as ConversationTaskStatus[])
-          .includes(this.taskStatus)
-      ) {
-        this.taskStatus = 'completed';
-      }
+      this.emit();
     } catch (error) {
       if (this.shuttingDown) {
         return;
       }
-      this.taskStatus = 'failed';
-      this.error = error instanceof Error ? error.message : String(error);
-      if (!assistantMessage.content) {
-        assistantMessage.content = this.error;
+      if (!this.isCancelled()) {
+        this.taskStatus = 'failed';
+        this.error = error instanceof Error ? error.message : String(error);
+        if (!assistantMessage.content) {
+          assistantMessage.content = this.error;
+        }
+        const failedAt = this.now();
+        conversation.lastResponseAt = failedAt;
+        this.completeAssistantTurn(
+          assistantMessage,
+          startedAt,
+          failedAt,
+          'failed',
+        );
       }
       this.checkpoints.captureSessionState(conversation);
       delete conversation.activeTurn;
@@ -389,6 +404,23 @@ export class ConversationTaskController {
     this.runtime.cancel();
     this.taskStatus = 'cancelled';
     if (this.conversation) {
+      const activeTurn = this.conversation.activeTurn;
+      if (activeTurn) {
+        const assistantMessage = this.conversation.messages.find(
+          message => message.id === activeTurn.assistantMessageId
+            && message.role === 'assistant',
+        );
+        const cancelledAt = this.now();
+        if (assistantMessage) {
+          this.completeAssistantTurn(
+            assistantMessage,
+            activeTurn.startedAt,
+            cancelledAt,
+            'cancelled',
+          );
+        }
+        this.conversation.lastResponseAt = cancelledAt;
+      }
       this.checkpoints.captureSessionState(this.conversation);
       delete this.conversation.activeTurn;
       this.checkpoints.persistWithoutBlocking(this.conversation);
@@ -517,13 +549,18 @@ export class ConversationTaskController {
       }
       return;
     }
-    if (chunk.type === 'tool_result' || chunk.type === 'tool_output') {
+    if (chunk.type === 'tool_output') {
+      const toolCall = assistantMessage.toolCalls?.find(call => call.id === chunk.id);
+      if (toolCall) {
+        toolCall.result = `${toolCall.result ?? ''}${chunk.content}`;
+      }
+      return;
+    }
+    if (chunk.type === 'tool_result') {
       const toolCall = assistantMessage.toolCalls?.find(call => call.id === chunk.id);
       if (toolCall) {
         toolCall.result = chunk.content;
-        toolCall.status = chunk.type === 'tool_result' && chunk.isError
-          ? 'error'
-          : 'completed';
+        toolCall.status = chunk.isError ? 'error' : 'completed';
       }
       return;
     }
@@ -547,6 +584,33 @@ export class ConversationTaskController {
 
   private emit(): void {
     this.onChange(this.snapshot());
+  }
+
+  private isCancelled(): boolean {
+    return this.taskStatus === 'cancelled';
+  }
+
+  private completeAssistantTurn(
+    assistantMessage: ChatMessage,
+    startedAt: number,
+    completedAt: number,
+    status: NonNullable<ChatMessage['turnStatus']>,
+  ): void {
+    assistantMessage.turnStatus = status;
+    assistantMessage.durationSeconds ??= Math.max(
+      0,
+      Math.round((completedAt - startedAt) / 1000),
+    );
+    for (const toolCall of assistantMessage.toolCalls ?? []) {
+      if (toolCall.status !== 'running') {
+        continue;
+      }
+      toolCall.status = status === 'failed'
+        ? 'error'
+        : status === 'completed'
+          ? 'completed'
+          : 'blocked';
+    }
   }
 
   private clearPendingUserInput(): void {

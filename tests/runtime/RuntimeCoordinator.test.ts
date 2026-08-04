@@ -201,6 +201,67 @@ describe('RuntimeCoordinator', () => {
     });
   });
 
+  it('persists the completed turn status and elapsed time', async () => {
+    const gate = deferred();
+    let now = 1_000;
+    const conversations = new Map([['a', conversation('a')]]);
+    const coordinator = new RuntimeCoordinator(
+      host,
+      new MemoryConversationStore(conversations),
+      () => createFakeRuntime({
+        gateByConversation: new Map([['a', gate.promise]]),
+      }),
+      () => now,
+    );
+
+    const task = coordinator.send('a', 'measure this turn', 'A.md');
+    await new Promise(resolve => setImmediate(resolve));
+    now = 63_000;
+    gate.resolve();
+    await task;
+
+    const assistant = (await coordinator.getSnapshot('a'))
+      .conversation?.messages.at(-1);
+    assert.equal(assistant?.turnStatus, 'completed');
+    assert.equal(assistant?.durationSeconds, 62);
+  });
+
+  it('persists failed turns and closes unfinished tool activity', async () => {
+    let firstClockRead = true;
+    const conversations = new Map([['a', conversation('a')]]);
+    const coordinator = new RuntimeCoordinator(
+      host,
+      new MemoryConversationStore(conversations),
+      () => createFakeRuntime({
+        scriptedChunks: [
+          {
+            type: 'tool_use',
+            id: 'command-1',
+            name: 'Bash',
+            input: { command: 'npm test' },
+          },
+          { type: 'error', content: 'Provider failed' },
+        ],
+      }),
+      () => {
+        if (firstClockRead) {
+          firstClockRead = false;
+          return 1_000;
+        }
+        return 5_000;
+      },
+    );
+
+    await coordinator.send('a', 'run the tests', 'A.md');
+
+    const snapshot = await coordinator.getSnapshot('a');
+    const assistant = snapshot.conversation?.messages.at(-1);
+    assert.equal(snapshot.status, 'failed');
+    assert.equal(assistant?.turnStatus, 'failed');
+    assert.equal(assistant?.durationSeconds, 4);
+    assert.equal(assistant?.toolCalls?.[0]?.status, 'error');
+  });
+
   it('pauses a task for approval and resumes after the decision', async () => {
     const conversations = new Map([['a', conversation('a')]]);
     const coordinator = new RuntimeCoordinator(
@@ -364,6 +425,32 @@ describe('RuntimeCoordinator', () => {
     assert.equal(cancelled.conversation?.activeTurn, undefined);
   });
 
+  it('persists cancellation status and elapsed time', async () => {
+    const gate = deferred();
+    let now = 2_000;
+    const conversations = new Map([['a', conversation('a')]]);
+    const coordinator = new RuntimeCoordinator(
+      host,
+      new MemoryConversationStore(conversations),
+      () => createFakeRuntime({
+        gateByConversation: new Map([['a', gate.promise]]),
+      }),
+      () => now,
+    );
+
+    const task = coordinator.send('a', 'cancel this turn', 'A.md');
+    await new Promise(resolve => setImmediate(resolve));
+    now = 12_000;
+    coordinator.cancel('a');
+    gate.resolve();
+    await task;
+
+    const assistant = (await coordinator.getSnapshot('a'))
+      .conversation?.messages.at(-1);
+    assert.equal(assistant?.turnStatus, 'cancelled');
+    assert.equal(assistant?.durationSeconds, 10);
+  });
+
   it('recovers persisted running output as interrupted and retries non-destructively', async () => {
     const gate = deferred();
     const sourceConversations = new Map([['a', conversation('a')]]);
@@ -401,6 +488,10 @@ describe('RuntimeCoordinator', () => {
     assert.equal(interrupted.conversation?.activeTurn?.status, 'interrupted');
     assert.equal(interrupted.conversation?.messages.at(-1)?.content, 'partial response');
     assert.equal(interrupted.conversation?.messages.at(-1)?.interruptedAt, 500);
+    assert.equal(
+      interrupted.conversation?.messages.at(-1)?.turnStatus,
+      'interrupted',
+    );
     assert.equal(
       interrupted.conversation?.messages.at(-1)?.toolCalls?.[0]?.status,
       'blocked',
