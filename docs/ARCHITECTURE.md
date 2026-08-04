@@ -70,6 +70,9 @@ runtime accepts only notifications matching its current `threadId` and
   status, and timestamps. On plugin restart, `running`, `waiting-approval`,
   and `waiting-input` states become `interrupted`; partial assistant output
   remains visible and the lost live turn is never presented as still running.
+- Every terminal assistant turn persists its final status and elapsed time.
+  These optional message fields remain backward-compatible with conversations
+  written before activity summaries were introduced.
 - An explicit model selection belongs to the conversation. An absent
   `selectedModel` means `Auto` and resolves through the current Windy
   default when a turn starts.
