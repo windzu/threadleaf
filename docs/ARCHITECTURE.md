@@ -77,10 +77,13 @@ runtime accepts only notifications matching its current `threadId` and
   Vault paths are persisted with the message and encoded as `<context_files>`;
   note bodies are read by the agent on demand instead of being copied wholesale
   into every prompt.
-- Local file attachments also belong to the user turn. Windy stores only file
-  metadata and a path reference: Vault files use Vault-relative paths and
-  external files use absolute paths. File contents are never copied into
-  `.windy`. Missing or moved files remain in history as unavailable references.
+- Local file attachments also belong to the user turn. For files with a source
+  path, Windy stores only metadata and a path reference: Vault files use
+  Vault-relative paths and external files use absolute paths. Missing or moved
+  files remain in history as unavailable references.
+- Clipboard images have no durable source path, so Windy content-addresses and
+  writes their bytes under `.windy/attachments` before storing the same
+  Vault-relative attachment reference used by dragged images.
 - Codex-compatible image attachments are sent as native local-image input.
   Other file types are sent as provider file mentions and remain available for
   agent tools to inspect from their original location.

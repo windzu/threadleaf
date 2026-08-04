@@ -3,6 +3,10 @@ import * as path from 'node:path';
 import { Notice, setIcon, setTooltip } from 'obsidian';
 
 import type { FileAttachment } from '../core/types';
+import type {
+  ClipboardImageLike,
+  ClipboardImageStore,
+} from '../storage/ClipboardImageStore';
 import {
   buildFileAttachments,
   mergeFileAttachments,
@@ -13,11 +17,13 @@ export interface FileAttachmentControlOptions {
   attachments: FileAttachment[];
   disabled: boolean;
   vaultPath: string | null;
+  clipboardImages: ClipboardImageStore;
   onChange: (attachments: FileAttachment[]) => void;
 }
 
 export interface FileAttachmentControl {
   openPicker(): void;
+  addClipboardImages(images: ClipboardImageLike[]): Promise<void>;
   getAttachments(): FileAttachment[];
 }
 
@@ -81,6 +87,7 @@ export function renderFileAttachmentControl(
         picker.click();
       }
     },
+    addClipboardImages,
     getAttachments: () => [...attachments],
   };
 
@@ -99,6 +106,33 @@ export function renderFileAttachmentControl(
       new Notice(
         `Could not attach ${result.rejected.length} item(s). `
           + 'Windy only references local files with an accessible path.',
+      );
+    }
+  }
+
+  async function addClipboardImages(
+    images: ClipboardImageLike[],
+  ): Promise<void> {
+    const saved: Array<FileAttachment | null> = [];
+    for (const image of images) {
+      try {
+        saved.push(await options.clipboardImages.save(image));
+      } catch {
+        saved.push(null);
+      }
+    }
+    const incoming = saved.filter(
+      (attachment): attachment is FileAttachment => attachment !== null,
+    );
+    attachments = mergeFileAttachments(attachments, incoming);
+    options.onChange([...attachments]);
+    renderChips();
+    const rejectedCount = saved.length - incoming.length;
+    if (rejectedCount > 0) {
+      new Notice(
+        `Could not paste ${rejectedCount} image(s). `
+          + 'Windy requires writable Vault storage and a supported image format '
+          + '(PNG, JPEG, GIF, or WebP).',
       );
     }
   }

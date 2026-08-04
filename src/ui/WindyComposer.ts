@@ -2,6 +2,7 @@ import { Menu, Notice, setIcon, setTooltip } from 'obsidian';
 
 import type { FileAttachment, PermissionMode } from '../core/types';
 import type { ConversationModelService } from '../models/types';
+import type { ClipboardImageStore } from '../storage/ClipboardImageStore';
 import type {
   PageReference,
   PageReferenceService,
@@ -19,6 +20,7 @@ export interface WindyComposerOptions {
   references: ComposerPageReference[];
   attachments: FileAttachment[];
   vaultPath: string | null;
+  clipboardImages: ClipboardImageStore;
   selectedModel: string | undefined;
   selectedReasoningEffort: string | undefined;
   status: ConversationTaskStatus;
@@ -49,6 +51,7 @@ export function renderWindyComposer(
     attachments: options.attachments,
     disabled: isRunning,
     vaultPath: options.vaultPath,
+    clipboardImages: options.clipboardImages,
     onChange: attachments => {
       options.onAttachmentsChange(attachments);
       updateSendState();
@@ -61,6 +64,9 @@ export function renderWindyComposer(
     disabled: isRunning,
     referenceService: options.referenceService,
     onChange: options.onDraftChange,
+    onPasteImages: images => {
+      void fileAttachments.addClipboardImages(images);
+    },
     onSubmit: options.onSubmit,
   });
   const actions = composer.createDiv('windy-view__composer-actions');
