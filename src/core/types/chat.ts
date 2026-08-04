@@ -27,6 +27,18 @@ export interface ImageAttachment {
   source: 'file' | 'paste' | 'drop';
 }
 
+/** A local file referenced by path without copying its contents into Windy. */
+export interface FileAttachment {
+  id: string;
+  name: string;
+  /** Vault-relative for vault files, absolute for external files. */
+  path: string;
+  location: 'vault' | 'external';
+  mediaType?: string;
+  size: number;
+  source: 'picker' | 'drop';
+}
+
 /** Content block for preserving streaming order in messages. */
 export type ContentBlock =
   | { type: 'text'; content: string }
@@ -48,6 +60,8 @@ export interface ChatMessage {
   primaryPagePath?: string;
   /** Additional Vault pages explicitly attached to this user turn. */
   referencedPagePaths?: string[];
+  /** Local files explicitly attached to this user turn. */
+  attachments?: FileAttachment[];
   images?: ImageAttachment[];
   /** True if this message represents a user interrupt (from SDK storage). */
   isInterrupt?: boolean;

@@ -1,17 +1,20 @@
 import type { WindySettings } from '../core/types';
 import { DEFAULT_CODEX_PROVIDER_CONFIG } from '../providers/codex/settings';
 
-const DEFAULT_CODEX_MODEL = 'gpt-5.6-sol';
+export const CODEX_DEFAULT_MODEL_SELECTION = 'codex-default';
+export const MODEL_DEFAULT_REASONING_SELECTION = 'model-default';
 
 export const DEFAULT_WINDY_SETTINGS: WindySettings = {
   userName: '',
   permissionMode: 'normal',
-  model: DEFAULT_CODEX_MODEL,
+  model: '',
   thinkingBudget: '',
-  effortLevel: 'medium',
+  effortLevel: '',
   serviceTier: '',
+  newConversationModel: CODEX_DEFAULT_MODEL_SELECTION,
+  newConversationReasoningEffort: MODEL_DEFAULT_REASONING_SELECTION,
   enableAutoTitleGeneration: false,
-  titleGenerationModel: DEFAULT_CODEX_MODEL,
+  titleGenerationModel: '',
   excludedTags: [],
   mediaFolder: 'attachments',
   systemPrompt: '',
@@ -31,17 +34,11 @@ export const DEFAULT_WINDY_SETTINGS: WindySettings = {
     codex: {
       ...DEFAULT_CODEX_PROVIDER_CONFIG,
       enabled: true,
-      customModels: DEFAULT_CODEX_MODEL,
-      visibleModels: [DEFAULT_CODEX_MODEL],
     },
   },
   settingsProvider: 'codex',
-  savedProviderModel: {
-    codex: DEFAULT_CODEX_MODEL,
-  },
-  savedProviderEffort: {
-    codex: 'medium',
-  },
+  savedProviderModel: {},
+  savedProviderEffort: {},
   savedProviderServiceTier: {},
   savedProviderThinkingBudget: {},
   savedProviderPermissionMode: {

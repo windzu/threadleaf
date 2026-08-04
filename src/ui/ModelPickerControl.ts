@@ -38,19 +38,6 @@ export function renderModelPickerControl(
       ));
       const menu = new Menu();
       menu.addItem(item => {
-        item
-          .setTitle('Auto')
-          .setIcon('wand-sparkles')
-          .setChecked(!options.selectedModel)
-          .onClick(() => runSelection(options, null));
-      });
-      menu.addItem(item => {
-        item
-          .setTitle(options.models.getAutoDescription())
-          .setDisabled(true);
-      });
-      menu.addSeparator();
-      menu.addItem(item => {
         item.setTitle('Choose model').setDisabled(true);
       });
       for (const model of models) {

@@ -1,6 +1,6 @@
 import type { ProviderHost } from '../core/providers/ProviderHost';
 import type { ChatRuntime } from '../core/runtime/ChatRuntime';
-import type { ApprovalDecision, AskUserAnswers } from '../core/types';
+import type { ApprovalDecision, AskUserAnswers, FileAttachment } from '../core/types';
 import type { ConversationStore } from '../conversations/ConversationRepository';
 import { ConversationTaskController } from './ConversationTaskController';
 import type {
@@ -111,12 +111,14 @@ export class RuntimeCoordinator {
     text: string,
     primaryPagePath: string,
     referencedPagePaths: string[] = [],
+    attachments: FileAttachment[] = [],
   ): Promise<void> {
     await (await this.ensureTask(conversationId)).send(
       text,
       primaryPagePath,
       undefined,
       referencedPagePaths,
+      attachments,
     );
   }
 
@@ -157,9 +159,31 @@ export class RuntimeCoordinator {
     await (await this.ensureTask(conversationId)).setModel(model);
   }
 
+  async setSelection(
+    conversationId: string,
+    model: string,
+    reasoningEffort: string,
+  ): Promise<void> {
+    await (await this.ensureTask(conversationId)).setSelection(
+      model,
+      reasoningEffort,
+    );
+  }
+
+  async materializeSelection(
+    conversationId: string,
+    model: string,
+    reasoningEffort: string,
+  ): Promise<void> {
+    await (await this.ensureTask(conversationId)).materializeSelection(
+      model,
+      reasoningEffort,
+    );
+  }
+
   async setReasoningEffort(
     conversationId: string,
-    reasoningEffort: string | undefined,
+    reasoningEffort: string,
   ): Promise<void> {
     await (await this.ensureTask(conversationId))
       .setReasoningEffort(reasoningEffort);

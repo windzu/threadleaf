@@ -14,23 +14,31 @@ export interface ConversationModelOption {
   defaultReasoningEffort: string;
 }
 
+export interface ResolvedConversationSelection {
+  model: string;
+  reasoningEffort: string;
+}
+
 export interface ConversationModelService {
   getOptions(): Promise<ConversationModelOption[]>;
+  getNewConversationDefaults(): Promise<ResolvedConversationSelection>;
+  getLegacyConversationDefaults(
+    selectedModel?: string,
+    selectedReasoningEffort?: string,
+  ): Promise<ResolvedConversationSelection>;
+  getSelectionForModel(
+    model: string | null,
+  ): Promise<ResolvedConversationSelection>;
   getSelectionLabel(
     selectedModel: string | undefined,
     options?: ConversationModelOption[],
   ): string;
-  getAutoDescription(): string;
   getReasoningOptions(
     selectedModel: string | undefined,
   ): Promise<ConversationReasoningEffortOption[]>;
   getReasoningSelectionLabel(
     selectedModel: string | undefined,
     selectedReasoningEffort: string | undefined,
-    options?: ConversationModelOption[],
-  ): string;
-  getReasoningAutoDescription(
-    selectedModel: string | undefined,
     options?: ConversationModelOption[],
   ): string;
   select(conversationId: string, model: string | null): Promise<void>;

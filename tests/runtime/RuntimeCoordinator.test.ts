@@ -580,6 +580,36 @@ describe('RuntimeCoordinator', () => {
     );
   });
 
+  it('stores a concrete model and reasoning effort in one selection update', async () => {
+    const conversations = new Map([['a', conversation('a')]]);
+    const coordinator = new RuntimeCoordinator(
+      host,
+      new MemoryConversationStore(conversations),
+      () => createFakeRuntime({}),
+    );
+
+    await coordinator.setSelection('a', 'gpt-5.6-sol', 'low');
+    const snapshot = await coordinator.getSnapshot('a');
+    assert.equal(snapshot.conversation?.selectedModel, 'gpt-5.6-sol');
+    assert.equal(snapshot.conversation?.selectedReasoningEffort, 'low');
+  });
+
+  it('materializes only missing legacy selection fields', async () => {
+    const legacy = conversation('a');
+    legacy.selectedModel = 'legacy-model';
+    const conversations = new Map([['a', legacy]]);
+    const coordinator = new RuntimeCoordinator(
+      host,
+      new MemoryConversationStore(conversations),
+      () => createFakeRuntime({}),
+    );
+
+    await coordinator.materializeSelection('a', 'fallback-model', 'medium');
+    const snapshot = await coordinator.getSnapshot('a');
+    assert.equal(snapshot.conversation?.selectedModel, 'legacy-model');
+    assert.equal(snapshot.conversation?.selectedReasoningEffort, 'medium');
+  });
+
   it('names a new conversation from its first request', async () => {
     const conversations = new Map([['a', conversation('a')]]);
     conversations.get('a')!.title = 'New conversation';
@@ -649,5 +679,35 @@ describe('RuntimeCoordinator', () => {
       'B.md',
       'Folder/C.base',
     ]);
+  });
+
+  it('persists and forwards local file attachments with the turn', async () => {
+    const conversations = new Map([['a', conversation('a')]]);
+    conversations.get('a')!.title = 'New conversation';
+    const preparedRequests: ChatTurnRequest[] = [];
+    const coordinator = new RuntimeCoordinator(
+      host,
+      new MemoryConversationStore(conversations),
+      () => createFakeRuntime({ preparedRequests }),
+    );
+    const attachments = [{
+      id: 'file-1',
+      name: 'report.pdf',
+      path: '/tmp/report.pdf',
+      location: 'external' as const,
+      mediaType: 'application/pdf',
+      size: 1024,
+      source: 'drop' as const,
+    }];
+
+    await coordinator.send('a', '', 'A.md', [], attachments);
+
+    const snapshot = await coordinator.getSnapshot('a');
+    assert.deepEqual(
+      snapshot.conversation?.messages.at(-2)?.attachments,
+      attachments,
+    );
+    assert.deepEqual(preparedRequests[0].attachments, attachments);
+    assert.equal(snapshot.conversation?.title, 'report.pdf');
   });
 });

@@ -101,6 +101,10 @@ export interface WindySettings {
   thinkingBudget: string;
   effortLevel: string;
   serviceTier: string;
+  /** Default model policy for conversations created after the setting changes. */
+  newConversationModel: string;
+  /** Default reasoning policy for conversations created after the setting changes. */
+  newConversationReasoningEffort: string;
   enableAutoTitleGeneration: boolean;
   titleGenerationModel: string;
 

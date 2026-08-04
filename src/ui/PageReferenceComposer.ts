@@ -27,7 +27,7 @@ export interface PageReferenceComposerOptions {
 export interface PageReferenceComposerControl {
   input: HTMLDivElement;
   getText(): string;
-  createAddButton(container: HTMLElement): HTMLButtonElement;
+  openReferencePicker(): void;
 }
 
 export function renderPageReferenceComposer(
@@ -116,21 +116,11 @@ export function renderPageReferenceComposer(
   return {
     input,
     getText: () => readEditorText(input),
-    createAddButton(actions: HTMLElement): HTMLButtonElement {
-      const button = actions.createEl('button', {
-        cls: 'windy-view__add-reference clickable-icon',
-        attr: {
-          type: 'button',
-          'aria-label': 'Add page context',
-        },
-      });
-      setIcon(button, 'plus');
-      button.disabled = options.disabled;
-      button.addEventListener('click', () => {
+    openReferencePicker(): void {
+      if (!options.disabled) {
         mentionRange = null;
         showResults('');
-      });
-      return button;
+      }
     },
   };
 

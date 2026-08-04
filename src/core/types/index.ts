@@ -6,6 +6,7 @@ export {
   type ConversationMeta,
   type ForkSource,
   type ImageAttachment,
+  type FileAttachment,
   type ImageMediaType,
   type SessionMetadata,
   type StreamChunk,

@@ -9,6 +9,7 @@ import type {
   AskUserAnswers,
   AskUserQuestionItem,
   ConversationMeta,
+  FileAttachment,
 } from '../core/types';
 import type { PermissionModeController } from '../app/PermissionModeController';
 import type {
@@ -31,19 +32,21 @@ import { renderWindyComposer } from './WindyComposer';
 import { WINDY_NAV_ICON } from './icons';
 import { MessageListRenderer } from './MessageListRenderer';
 import {
-  captureMessageScrollPosition,
+  MessageScrollPositionStore,
   restoreMessageScrollPosition,
 } from './messageScrollPosition';
 import {
   type ComposerPageReference,
   getReferencedPagePaths,
 } from './pageReferenceMentions';
+import { getVaultPath } from '../utils/path';
 
 export const VIEW_TYPE_WINDY = 'windy-agent-view';
 
 interface ComposerDraft {
   text: string;
   references: ComposerPageReference[];
+  attachments: FileAttachment[];
   selectedModel?: string;
   selectedReasoningEffort?: string;
 }
@@ -54,6 +57,7 @@ export class WindyView extends ItemView {
   private composerDrafts = new Map<string, ComposerDraft>();
   private messageRenderer: MessageListRenderer | null = null;
   private messageRenderGeneration = 0;
+  private readonly messageScrollPositions = new MessageScrollPositionStore();
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -86,12 +90,18 @@ export class WindyView extends ItemView {
   }
 
   async onOpen(): Promise<void> {
-    await this.renderRoute(this.router.getRoute());
+    try {
+      await this.renderRoute(this.router.getRoute());
+    } catch (error) {
+      this.renderRouteError(error);
+    }
     this.register(this.router.onChange(route => {
       if (this.draftPagePath && this.draftPagePath !== route.page?.path) {
         this.draftPagePath = null;
       }
-      void this.renderRoute(route);
+      void this.renderRoute(route).catch(error => {
+        this.renderRouteError(error);
+      });
     }));
     this.register(this.runtimeCoordinator.onChange((conversationId, snapshot) => {
       const route = this.router.getRoute();
@@ -120,15 +130,43 @@ export class WindyView extends ItemView {
     }
     this.history = history?.conversations ?? [];
     if (this.draftPagePath === route.page?.path) {
+      await this.ensureComposerDraftSelection(route.page.path);
+      if (!this.isCurrentRoute(route)) {
+        return;
+      }
       this.renderConversation(route, null, this.history);
       return;
     }
     const conversationId = route.activeConversationId;
     if (!conversationId) {
+      if (route.page) {
+        await this.ensureComposerDraftSelection(route.page.path);
+      }
+      if (!this.isCurrentRoute(route)) {
+        return;
+      }
       this.renderConversation(route, null, this.history);
       return;
     }
-    const snapshot = await this.runtimeCoordinator.getSnapshot(conversationId);
+    let snapshot = await this.runtimeCoordinator.getSnapshot(conversationId);
+    if (
+      snapshot.conversation
+      && (
+        !snapshot.conversation.selectedModel
+        || !snapshot.conversation.selectedReasoningEffort
+      )
+    ) {
+      const selection = await this.conversationModels.getLegacyConversationDefaults(
+        snapshot.conversation.selectedModel,
+        snapshot.conversation.selectedReasoningEffort,
+      );
+      await this.runtimeCoordinator.materializeSelection(
+        conversationId,
+        selection.model,
+        selection.reasoningEffort,
+      );
+      snapshot = await this.runtimeCoordinator.getSnapshot(conversationId);
+    }
     const currentRoute = this.router.getRoute();
     if (
       currentRoute.page?.path === route.page?.path
@@ -148,7 +186,13 @@ export class WindyView extends ItemView {
     const previousMessages = this.contentEl.querySelector<HTMLElement>(
       '.windy-view__messages',
     );
-    const scrollPosition = captureMessageScrollPosition(previousMessages);
+    const scrollKey = page
+      ? snapshot?.conversation?.id ?? `draft:${page.path}`
+      : null;
+    const scrollPosition = this.messageScrollPositions.prepareForRender(
+      scrollKey,
+      previousMessages,
+    );
     this.disposeMessageRenderer();
     this.contentEl.empty();
     this.contentEl.addClass('windy-view');
@@ -174,7 +218,11 @@ export class WindyView extends ItemView {
       history,
       activeConversationId: route.activeConversationId,
       isDraft: this.draftPagePath === page.path || !snapshot?.conversation,
-      onStartDraft: () => this.startDraft(),
+      onStartDraft: () => {
+        void this.startDraft().catch(error => {
+          new Notice(error instanceof Error ? error.message : String(error));
+        });
+      },
       onSelect: async conversationId => {
         this.draftPagePath = null;
         await this.pageConversations.selectConversation(
@@ -233,6 +281,8 @@ export class WindyView extends ItemView {
       primaryPage: page,
       text: composerDraft.text,
       references: composerDraft.references,
+      attachments: composerDraft.attachments,
+      vaultPath: getVaultPath(this.app),
       selectedModel: isDraft
         ? composerDraft.selectedModel
         : snapshot.conversation?.selectedModel,
@@ -247,13 +297,15 @@ export class WindyView extends ItemView {
         composerDraft.text = text;
         composerDraft.references = references;
       },
+      onAttachmentsChange: attachments => {
+        composerDraft.attachments = attachments;
+      },
       onModelSelect: async model => {
         if (!snapshot?.conversation) {
-          const selectedModel = model ?? undefined;
-          if (composerDraft.selectedModel !== selectedModel) {
-            delete composerDraft.selectedReasoningEffort;
-          }
-          composerDraft.selectedModel = selectedModel;
+          const selection = await this.conversationModels
+            .getSelectionForModel(model);
+          composerDraft.selectedModel = selection.model;
+          composerDraft.selectedReasoningEffort = selection.reasoningEffort;
           this.renderConversation(route, snapshot, history);
           return;
         }
@@ -264,7 +316,13 @@ export class WindyView extends ItemView {
           ? composerDraft.selectedModel
           : snapshot?.conversation?.selectedModel;
         if (!snapshot?.conversation) {
-          composerDraft.selectedReasoningEffort = reasoningEffort ?? undefined;
+          if (reasoningEffort === null) {
+            const selection = await this.conversationModels
+              .getSelectionForModel(selectedModel ?? null);
+            composerDraft.selectedReasoningEffort = selection.reasoningEffort;
+          } else {
+            composerDraft.selectedReasoningEffort = reasoningEffort;
+          }
           this.renderConversation(route, snapshot, history);
           return;
         }
@@ -512,15 +570,22 @@ export class WindyView extends ItemView {
     });
   }
 
-  private startDraft(): void {
+  private async startDraft(): Promise<void> {
     const route = this.router.getRoute();
     if (!route.page) {
+      return;
+    }
+    const selection = await this.conversationModels.getNewConversationDefaults();
+    if (this.router.getRoute().page?.path !== route.page.path) {
       return;
     }
     this.draftPagePath = route.page.path;
     this.composerDrafts.set(route.page.path, {
       text: '',
       references: [],
+      attachments: [],
+      selectedModel: selection.model,
+      selectedReasoningEffort: selection.reasoningEffort,
     });
     this.renderConversation(route, null, this.history);
   }
@@ -528,11 +593,14 @@ export class WindyView extends ItemView {
   private async send(rawText: string): Promise<void> {
     const route = this.router.getRoute();
     const text = rawText.trim();
-    if (!route.page || !text) {
+    if (!route.page) {
       return;
     }
     const pagePath = route.page.path;
     const composerDraft = this.getComposerDraft(pagePath);
+    if (!text && composerDraft.attachments.length === 0) {
+      return;
+    }
     const referencedPagePaths = getReferencedPagePaths(
       composerDraft.references,
     );
@@ -554,6 +622,7 @@ export class WindyView extends ItemView {
         text,
         pagePath,
         referencedPagePaths,
+        composerDraft.attachments,
       );
     } catch (error) {
       if (!this.composerDrafts.has(pagePath)) {
@@ -566,10 +635,41 @@ export class WindyView extends ItemView {
   private getComposerDraft(pagePath: string): ComposerDraft {
     let draft = this.composerDrafts.get(pagePath);
     if (!draft) {
-      draft = { text: '', references: [] };
+      draft = { text: '', references: [], attachments: [] };
       this.composerDrafts.set(pagePath, draft);
     }
     return draft;
+  }
+
+  private async ensureComposerDraftSelection(pagePath: string): Promise<void> {
+    const draft = this.getComposerDraft(pagePath);
+    if (draft.selectedModel && draft.selectedReasoningEffort) {
+      return;
+    }
+    const selection = await this.conversationModels.getNewConversationDefaults();
+    if (this.composerDrafts.get(pagePath) !== draft) {
+      return;
+    }
+    draft.selectedModel = selection.model;
+    draft.selectedReasoningEffort = selection.reasoningEffort;
+  }
+
+  private isCurrentRoute(route: PageConversationRoute): boolean {
+    const current = this.router.getRoute();
+    return current.page?.path === route.page?.path
+      && current.activeConversationId === route.activeConversationId;
+  }
+
+  private renderRouteError(error: unknown): void {
+    this.disposeMessageRenderer();
+    this.contentEl.empty();
+    this.contentEl.addClass('windy-view');
+    this.contentEl.createDiv({
+      cls: 'windy-view__error',
+      text: `Could not load Windy: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    });
   }
 
   private disposeMessageRenderer(): void {

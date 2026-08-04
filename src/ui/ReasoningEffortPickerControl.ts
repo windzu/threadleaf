@@ -46,22 +46,6 @@ export function renderReasoningEffortPickerControl(
       ));
       const menu = new Menu();
       menu.addItem(item => {
-        item
-          .setTitle('Default')
-          .setIcon('wand-sparkles')
-          .setChecked(!options.selectedReasoningEffort)
-          .onClick(() => runSelection(options, null));
-      });
-      menu.addItem(item => {
-        item
-          .setTitle(options.models.getReasoningAutoDescription(
-            options.selectedModel,
-            models,
-          ))
-          .setDisabled(true);
-      });
-      menu.addSeparator();
-      menu.addItem(item => {
         item.setTitle('Reasoning effort').setDisabled(true);
       });
       for (const effort of efforts) {
