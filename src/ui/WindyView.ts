@@ -32,7 +32,7 @@ import { renderWindyComposer } from './WindyComposer';
 import { WINDY_NAV_ICON } from './icons';
 import { MessageListRenderer } from './MessageListRenderer';
 import {
-  captureMessageScrollPosition,
+  MessageScrollPositionStore,
   restoreMessageScrollPosition,
 } from './messageScrollPosition';
 import {
@@ -57,6 +57,7 @@ export class WindyView extends ItemView {
   private composerDrafts = new Map<string, ComposerDraft>();
   private messageRenderer: MessageListRenderer | null = null;
   private messageRenderGeneration = 0;
+  private readonly messageScrollPositions = new MessageScrollPositionStore();
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -151,7 +152,13 @@ export class WindyView extends ItemView {
     const previousMessages = this.contentEl.querySelector<HTMLElement>(
       '.windy-view__messages',
     );
-    const scrollPosition = captureMessageScrollPosition(previousMessages);
+    const scrollKey = page
+      ? snapshot?.conversation?.id ?? `draft:${page.path}`
+      : null;
+    const scrollPosition = this.messageScrollPositions.prepareForRender(
+      scrollKey,
+      previousMessages,
+    );
     this.disposeMessageRenderer();
     this.contentEl.empty();
     this.contentEl.addClass('windy-view');

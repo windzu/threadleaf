@@ -10,14 +10,37 @@ export interface MessageScrollPosition {
   stickToBottom: boolean;
 }
 
+const DEFAULT_SCROLL_POSITION: MessageScrollPosition = {
+  scrollTop: 0,
+  stickToBottom: true,
+};
+
+export class MessageScrollPositionStore {
+  private activeKey: string | null = null;
+  private readonly positions = new Map<string, MessageScrollPosition>();
+
+  prepareForRender(
+    nextKey: string | null,
+    currentContainer: ScrollContainer | null,
+  ): MessageScrollPosition {
+    if (this.activeKey && currentContainer) {
+      this.positions.set(
+        this.activeKey,
+        captureMessageScrollPosition(currentContainer),
+      );
+    }
+    this.activeKey = nextKey;
+    return nextKey
+      ? this.positions.get(nextKey) ?? { ...DEFAULT_SCROLL_POSITION }
+      : { ...DEFAULT_SCROLL_POSITION };
+  }
+}
+
 export function captureMessageScrollPosition(
   container: ScrollContainer | null,
 ): MessageScrollPosition {
   if (!container) {
-    return {
-      scrollTop: 0,
-      stickToBottom: true,
-    };
+    return { ...DEFAULT_SCROLL_POSITION };
   }
 
   return {
