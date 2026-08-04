@@ -36,7 +36,7 @@ export interface FileAttachment {
   location: 'vault' | 'external';
   mediaType?: string;
   size: number;
-  source: 'picker' | 'drop';
+  source: 'picker' | 'drop' | 'paste';
 }
 
 /** Content block for preserving streaming order in messages. */

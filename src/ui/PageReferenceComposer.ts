@@ -1,5 +1,9 @@
 import { setIcon } from 'obsidian';
 
+import {
+  extractClipboardImages,
+  type ClipboardImageLike,
+} from '../storage/ClipboardImageStore';
 import type {
   PageReference,
   PageReferenceService,
@@ -21,6 +25,7 @@ export interface PageReferenceComposerOptions {
   disabled: boolean;
   referenceService: PageReferenceService;
   onChange: (text: string, references: ComposerPageReference[]) => void;
+  onPasteImages: (images: ClipboardImageLike[]) => void;
   onSubmit: (text: string) => void;
 }
 
@@ -106,6 +111,14 @@ export function renderPageReferenceComposer(
   });
   input.addEventListener('paste', event => {
     if (options.disabled) {
+      return;
+    }
+    const images = extractClipboardImages(
+      Array.from(event.clipboardData?.items ?? []),
+    );
+    if (images.length > 0) {
+      event.preventDefault();
+      options.onPasteImages(images);
       return;
     }
     event.preventDefault();
