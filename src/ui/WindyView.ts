@@ -9,6 +9,7 @@ import type {
   AskUserAnswers,
   AskUserQuestionItem,
   ConversationMeta,
+  FileAttachment,
 } from '../core/types';
 import type { PermissionModeController } from '../app/PermissionModeController';
 import type {
@@ -38,12 +39,14 @@ import {
   type ComposerPageReference,
   getReferencedPagePaths,
 } from './pageReferenceMentions';
+import { getVaultPath } from '../utils/path';
 
 export const VIEW_TYPE_WINDY = 'windy-agent-view';
 
 interface ComposerDraft {
   text: string;
   references: ComposerPageReference[];
+  attachments: FileAttachment[];
   selectedModel?: string;
   selectedReasoningEffort?: string;
 }
@@ -233,6 +236,8 @@ export class WindyView extends ItemView {
       primaryPage: page,
       text: composerDraft.text,
       references: composerDraft.references,
+      attachments: composerDraft.attachments,
+      vaultPath: getVaultPath(this.app),
       selectedModel: isDraft
         ? composerDraft.selectedModel
         : snapshot.conversation?.selectedModel,
@@ -246,6 +251,9 @@ export class WindyView extends ItemView {
       onDraftChange: (text, references) => {
         composerDraft.text = text;
         composerDraft.references = references;
+      },
+      onAttachmentsChange: attachments => {
+        composerDraft.attachments = attachments;
       },
       onModelSelect: async model => {
         if (!snapshot?.conversation) {
@@ -521,6 +529,7 @@ export class WindyView extends ItemView {
     this.composerDrafts.set(route.page.path, {
       text: '',
       references: [],
+      attachments: [],
     });
     this.renderConversation(route, null, this.history);
   }
@@ -528,11 +537,14 @@ export class WindyView extends ItemView {
   private async send(rawText: string): Promise<void> {
     const route = this.router.getRoute();
     const text = rawText.trim();
-    if (!route.page || !text) {
+    if (!route.page) {
       return;
     }
     const pagePath = route.page.path;
     const composerDraft = this.getComposerDraft(pagePath);
+    if (!text && composerDraft.attachments.length === 0) {
+      return;
+    }
     const referencedPagePaths = getReferencedPagePaths(
       composerDraft.references,
     );
@@ -554,6 +566,7 @@ export class WindyView extends ItemView {
         text,
         pagePath,
         referencedPagePaths,
+        composerDraft.attachments,
       );
     } catch (error) {
       if (!this.composerDrafts.has(pagePath)) {
@@ -566,7 +579,7 @@ export class WindyView extends ItemView {
   private getComposerDraft(pagePath: string): ComposerDraft {
     let draft = this.composerDrafts.get(pagePath);
     if (!draft) {
-      draft = { text: '', references: [] };
+      draft = { text: '', references: [], attachments: [] };
       this.composerDrafts.set(pagePath, draft);
     }
     return draft;

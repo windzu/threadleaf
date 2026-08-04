@@ -25,7 +25,11 @@ import type {
   PreparedChatTurn,
   SessionUpdateResult,
 } from '../../../core/runtime/types';
-import type { ChatMessage, Conversation, ForkSource, SlashCommand, StreamChunk } from '../../../core/types';
+import type { ChatMessage, Conversation, FileAttachment, ForkSource, SlashCommand, StreamChunk } from '../../../core/types';
+import {
+  isCodexImageAttachment,
+  resolveFileAttachmentPath,
+} from '../../../utils/fileAttachment';
 import { getVaultPath } from '../../../utils/path';
 import { buildContextFromHistory } from '../../../utils/session';
 import { CODEX_PROVIDER_CAPABILITIES } from '../capabilities';
@@ -499,7 +503,12 @@ export class CodexChatRuntime implements ChatRuntime {
 
         // Build input
         const skillInputs = await this.resolveSkillInputs(turn.request.text);
-        const turnInputBundle = this.buildInput(turn.prompt, turn.request.images, skillInputs);
+        const turnInputBundle = this.buildInput(
+          turn.prompt,
+          turn.request.images,
+          turn.request.attachments,
+          skillInputs,
+        );
         this.registerActiveInputBundle(turnInputBundle);
 
         // Start turn
@@ -637,7 +646,12 @@ export class CodexChatRuntime implements ChatRuntime {
     }
 
     const skillInputs = await this.resolveSkillInputs(turn.request.text);
-    const inputBundle = this.buildInput(turn.prompt, turn.request.images, skillInputs);
+    const inputBundle = this.buildInput(
+      turn.prompt,
+      turn.request.images,
+      turn.request.attachments,
+      skillInputs,
+    );
     this.registerActiveInputBundle(inputBundle);
 
     try {
@@ -1303,7 +1317,12 @@ export class CodexChatRuntime implements ChatRuntime {
     }
   }
 
-  private buildInput(text: string, images?: ImageAttachment[], skills?: SkillInput[]): CodexInputBundle {
+  private buildInput(
+    text: string,
+    images?: ImageAttachment[],
+    attachments?: FileAttachment[],
+    skills?: SkillInput[],
+  ): CodexInputBundle {
     const input: UserInput[] = [];
     let tempDir: string | null = null;
 
@@ -1334,6 +1353,25 @@ export class CodexChatRuntime implements ChatRuntime {
             throw new Error(`Codex cannot access image attachment path from the selected target: ${filePath}`);
           }
           input.push({ type: 'localImage', path: targetFilePath });
+        }
+      }
+
+      if (attachments && attachments.length > 0) {
+        const vaultPath = getVaultPath(this.plugin.app);
+        for (const attachment of attachments) {
+          const hostPath = resolveFileAttachmentPath(attachment, vaultPath);
+          if (!hostPath || !fs.existsSync(hostPath)) {
+            throw new Error(`Attached file is no longer available: ${attachment.path}`);
+          }
+          const targetPath = this.mapHostPathToTarget(hostPath);
+          if (!targetPath) {
+            throw new Error(
+              `Codex cannot access the attached file from the selected target: ${hostPath}`,
+            );
+          }
+          input.push(isCodexImageAttachment(attachment)
+            ? { type: 'localImage', path: targetPath }
+            : { type: 'mention', name: attachment.name, path: targetPath });
         }
       }
 

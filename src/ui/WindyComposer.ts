@@ -1,6 +1,6 @@
-import { Notice, setIcon, setTooltip } from 'obsidian';
+import { Menu, Notice, setIcon, setTooltip } from 'obsidian';
 
-import type { PermissionMode } from '../core/types';
+import type { FileAttachment, PermissionMode } from '../core/types';
 import type { ConversationModelService } from '../models/types';
 import type {
   PageReference,
@@ -8,6 +8,7 @@ import type {
 } from '../page-context/PageReferenceService';
 import type { ConversationTaskStatus } from '../runtime/RuntimeCoordinator';
 import { renderModelPickerControl } from './ModelPickerControl';
+import { renderFileAttachmentControl } from './FileAttachmentControl';
 import { renderReasoningEffortPickerControl } from './ReasoningEffortPickerControl';
 import { renderPageReferenceComposer } from './PageReferenceComposer';
 import type { ComposerPageReference } from './pageReferenceMentions';
@@ -16,6 +17,8 @@ export interface WindyComposerOptions {
   primaryPage: PageReference;
   text: string;
   references: ComposerPageReference[];
+  attachments: FileAttachment[];
+  vaultPath: string | null;
   selectedModel: string | undefined;
   selectedReasoningEffort: string | undefined;
   status: ConversationTaskStatus;
@@ -23,6 +26,7 @@ export interface WindyComposerOptions {
   models: ConversationModelService;
   referenceService: PageReferenceService;
   onDraftChange: (text: string, references: ComposerPageReference[]) => void;
+  onAttachmentsChange: (attachments: FileAttachment[]) => void;
   onModelSelect: (model: string | null) => Promise<void>;
   onReasoningEffortSelect: (reasoningEffort: string | null) => Promise<void>;
   onPermissionModeSelect: (mode: PermissionMode) => Promise<void>;
@@ -40,6 +44,16 @@ export function renderWindyComposer(
     || options.status === 'waiting-approval'
     || options.status === 'waiting-input'
   );
+  let updateSendState = (): void => undefined;
+  const fileAttachments = renderFileAttachmentControl(composer, {
+    attachments: options.attachments,
+    disabled: isRunning,
+    vaultPath: options.vaultPath,
+    onChange: attachments => {
+      options.onAttachmentsChange(attachments);
+      updateSendState();
+    },
+  });
   const referenceComposer = renderPageReferenceComposer(composer, {
     primaryPage: options.primaryPage,
     text: options.text,
@@ -51,7 +65,28 @@ export function renderWindyComposer(
   });
   const actions = composer.createDiv('windy-view__composer-actions');
   const leftActions = actions.createDiv('windy-view__composer-actions-left');
-  referenceComposer.createAddButton(leftActions);
+  const addButton = leftActions.createEl('button', {
+    cls: 'windy-view__add-reference clickable-icon',
+    attr: {
+      type: 'button',
+      'aria-label': 'Add context or files',
+    },
+  });
+  setIcon(addButton, 'plus');
+  setTooltip(addButton, 'Add context or files');
+  addButton.disabled = isRunning;
+  addButton.addEventListener('click', event => {
+    const menu = new Menu();
+    menu.addItem(item => item
+      .setTitle('Add page context')
+      .setIcon('file-text')
+      .onClick(() => referenceComposer.openReferencePicker()));
+    menu.addItem(item => item
+      .setTitle('Add files')
+      .setIcon('paperclip')
+      .onClick(() => fileAttachments.openPicker()));
+    menu.showAtMouseEvent(event);
+  });
   if (options.status !== 'idle') {
     const status = leftActions.createDiv({
       cls: `windy-view__status windy-view__status--${options.status}`,
@@ -85,8 +120,10 @@ export function renderWindyComposer(
   });
   setIcon(sendButton, isRunning ? 'square' : 'arrow-up');
   setTooltip(sendButton, isRunning ? 'Stop response' : 'Send message');
-  const updateSendState = (): void => {
-    sendButton.disabled = !isRunning && !referenceComposer.getText().trim();
+  updateSendState = (): void => {
+    sendButton.disabled = !isRunning
+      && !referenceComposer.getText().trim()
+      && fileAttachments.getAttachments().length === 0;
   };
   updateSendState();
   referenceComposer.input.addEventListener('input', updateSendState);

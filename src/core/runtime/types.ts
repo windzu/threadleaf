@@ -5,6 +5,7 @@ import type {
   ApprovalDecision,
   Conversation,
   ExitPlanModeCallback,
+  FileAttachment,
   ImageAttachment,
   StreamChunk,
 } from '../types';
@@ -45,6 +46,7 @@ export type AskUserQuestionCallback = (
 export interface ChatTurnRequest {
   text: string;
   images?: ImageAttachment[];
+  attachments?: FileAttachment[];
   primaryPagePath?: string;
   referencedPagePaths?: string[];
   editorSelection?: EditorSelectionContext | null;

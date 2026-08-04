@@ -77,6 +77,13 @@ runtime accepts only notifications matching its current `threadId` and
   Vault paths are persisted with the message and encoded as `<context_files>`;
   note bodies are read by the agent on demand instead of being copied wholesale
   into every prompt.
+- Local file attachments also belong to the user turn. Windy stores only file
+  metadata and a path reference: Vault files use Vault-relative paths and
+  external files use absolute paths. File contents are never copied into
+  `.windy`. Missing or moved files remain in history as unavailable references.
+- Codex-compatible image attachments are sent as native local-image input.
+  Other file types are sent as provider file mentions and remain available for
+  agent tools to inspect from their original location.
 
 ## Current boundaries
 
@@ -101,6 +108,8 @@ runtime accepts only notifications matching its current `threadId` and
 - `src/ui/MessageListRenderer`: lifecycle-scoped Markdown, reasoning, and tool
   presentation. Completed assistant messages use Obsidian's native Markdown
   renderer; live output remains plain text until the turn stops.
+- `src/ui/FileAttachmentControl`: unrestricted local-file selection, drag and
+  drop, attachment chips, path normalization, and duplicate suppression.
 - `src/ui`: remaining Obsidian presentation and user interaction.
 
 Future storage and UI work should preserve these ownership boundaries.

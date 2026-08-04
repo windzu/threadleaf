@@ -7,6 +7,7 @@ import type {
   AskUserQuestionItem,
   ChatMessage,
   Conversation,
+  FileAttachment,
   StreamChunk,
 } from '../core/types';
 import type { ConversationStore } from '../conversations/ConversationRepository';
@@ -111,6 +112,7 @@ export class ConversationTaskController {
     primaryPagePath: string,
     displayContent?: string,
     referencedPagePaths: string[] = [],
+    attachments: FileAttachment[] = [],
   ): Promise<void> {
     if (
       this.taskStatus === 'running'
@@ -135,6 +137,9 @@ export class ConversationTaskController {
       ...(referencedPagePaths.length > 0
         ? { referencedPagePaths: [...new Set(referencedPagePaths)] }
         : {}),
+      ...(attachments.length > 0
+        ? { attachments: structuredClone(attachments) }
+        : {}),
     };
     const assistantMessage: ChatMessage = {
       id: randomUUID(),
@@ -145,7 +150,7 @@ export class ConversationTaskController {
       toolCalls: [],
     };
     if (conversation.title === 'New conversation') {
-      conversation.title = deriveConversationTitle(text);
+      conversation.title = deriveConversationTitle(text || attachments[0]?.name || '');
     }
     conversation.messages.push(userMessage, assistantMessage);
     conversation.activeTurn = {
@@ -169,6 +174,7 @@ export class ConversationTaskController {
       text,
       primaryPagePath,
       referencedPagePaths,
+      attachments,
     });
     try {
       for await (const chunk of this.runtime.query(
@@ -255,6 +261,7 @@ export class ConversationTaskController {
       userMessage.primaryPagePath ?? state.primaryPagePath,
       userMessage.displayContent,
       userMessage.referencedPagePaths,
+      userMessage.attachments,
     );
   }
 

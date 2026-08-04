@@ -1,3 +1,5 @@
+import * as fs from 'node:fs';
+
 import {
   type App,
   Component,
@@ -21,6 +23,13 @@ import {
   toolStatusLabel,
 } from './messageFormatting';
 import { WINDY_NAV_ICON } from './icons';
+import {
+  attachmentIcon,
+  attachmentTypeLabel,
+  formatFileSize,
+} from './FileAttachmentControl';
+import { resolveFileAttachmentPath } from '../utils/fileAttachment';
+import { getVaultPath } from '../utils/path';
 
 export class MessageListRenderer extends Component {
   constructor(private readonly app: App) {
@@ -44,6 +53,7 @@ export class MessageListRenderer extends Component {
       role.createSpan({
         text: message.role === 'user' ? 'You' : 'Windy',
       });
+      this.renderFileAttachments(messageElement, message);
       this.renderReferences(messageElement, message);
       if (message.role === 'assistant') {
         const activity = messageElement.createDiv('windy-message__activity');
@@ -91,6 +101,41 @@ export class MessageListRenderer extends Component {
       }
     }
     await Promise.all(markdownRenders);
+  }
+
+  private renderFileAttachments(
+    messageElement: HTMLElement,
+    message: ChatMessage,
+  ): void {
+    if (!message.attachments?.length) {
+      return;
+    }
+    const container = messageElement.createDiv('windy-message__file-attachments');
+    const vaultPath = getVaultPath(this.app);
+    for (const attachment of message.attachments) {
+      const resolvedPath = resolveFileAttachmentPath(attachment, vaultPath);
+      const available = Boolean(resolvedPath && fs.existsSync(resolvedPath));
+      const item = container.createDiv({
+        cls: `windy-message__file${available ? '' : ' is-missing'}`,
+      });
+      const icon = item.createSpan('windy-message__file-icon');
+      setIcon(icon, available ? attachmentIcon(attachment) : 'file-x');
+      const labels = item.createSpan('windy-message__file-labels');
+      labels.createSpan({
+        cls: 'windy-message__file-name',
+        text: attachment.name,
+      });
+      labels.createSpan({
+        cls: 'windy-message__file-path',
+        text: available
+          ? `${attachmentTypeLabel(attachment)} · ${attachment.path} · ${formatFileSize(attachment.size)}`
+          : `${attachmentTypeLabel(attachment)} · ${attachment.path} · File unavailable`,
+      });
+      item.setAttribute('title', attachment.path);
+      item.setAttribute('aria-label', available
+        ? `Attached file: ${attachment.path}`
+        : `Attached file unavailable: ${attachment.path}`);
+    }
   }
 
   private async renderMarkdown(

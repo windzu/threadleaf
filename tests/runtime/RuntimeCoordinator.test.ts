@@ -650,4 +650,34 @@ describe('RuntimeCoordinator', () => {
       'Folder/C.base',
     ]);
   });
+
+  it('persists and forwards local file attachments with the turn', async () => {
+    const conversations = new Map([['a', conversation('a')]]);
+    conversations.get('a')!.title = 'New conversation';
+    const preparedRequests: ChatTurnRequest[] = [];
+    const coordinator = new RuntimeCoordinator(
+      host,
+      new MemoryConversationStore(conversations),
+      () => createFakeRuntime({ preparedRequests }),
+    );
+    const attachments = [{
+      id: 'file-1',
+      name: 'report.pdf',
+      path: '/tmp/report.pdf',
+      location: 'external' as const,
+      mediaType: 'application/pdf',
+      size: 1024,
+      source: 'drop' as const,
+    }];
+
+    await coordinator.send('a', '', 'A.md', [], attachments);
+
+    const snapshot = await coordinator.getSnapshot('a');
+    assert.deepEqual(
+      snapshot.conversation?.messages.at(-2)?.attachments,
+      attachments,
+    );
+    assert.deepEqual(preparedRequests[0].attachments, attachments);
+    assert.equal(snapshot.conversation?.title, 'report.pdf');
+  });
 });

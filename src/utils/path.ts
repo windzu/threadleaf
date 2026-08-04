@@ -4,7 +4,14 @@ import * as os from 'os';
 import * as path from 'path';
 
 export function getVaultPath(app: App): string | null {
-  const basePath = (app.vault.adapter as { basePath?: unknown } | undefined)?.basePath;
+  const adapter = app.vault.adapter as {
+    basePath?: unknown;
+    getBasePath?: () => unknown;
+  } | undefined;
+  if (typeof adapter?.basePath === 'string') {
+    return adapter.basePath;
+  }
+  const basePath = adapter?.getBasePath?.();
   return typeof basePath === 'string' ? basePath : null;
 }
 

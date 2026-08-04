@@ -658,6 +658,14 @@
     0 7px 22px rgb(0 0 0 / 9%);
 }
 
+.windy-view__composer.is-dragging-files {
+  background: color-mix(in srgb, var(--windy-accent) 6%, var(--background-primary));
+  border-color: var(--windy-accent);
+  box-shadow:
+    0 0 0 2px var(--windy-accent-soft),
+    0 7px 22px rgb(0 0 0 / 9%);
+}
+
 .windy-view__input {
   background: transparent;
   border: 0;
@@ -740,6 +748,93 @@
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
+}
+
+.windy-composer__file-picker,
+.windy-composer__file-attachments.is-empty {
+  display: none;
+}
+
+.windy-composer__file-attachments,
+.windy-message__file-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.windy-composer__file-chip,
+.windy-message__file {
+  align-items: center;
+  background: var(--windy-surface-muted);
+  border: 1px solid var(--windy-border);
+  border-radius: 10px;
+  display: flex;
+  gap: 7px;
+  max-width: 100%;
+  min-width: 0;
+  padding: 5px 7px;
+}
+
+.windy-composer__file-chip {
+  max-width: min(100%, 240px);
+}
+
+.windy-message__file {
+  max-width: min(100%, 360px);
+}
+
+.windy-message__file.is-missing {
+  border-color: color-mix(in srgb, var(--text-error) 35%, var(--windy-border));
+  color: var(--text-error);
+}
+
+.windy-composer__file-icon,
+.windy-message__file-icon,
+.windy-composer__file-remove {
+  display: flex;
+  flex: 0 0 auto;
+}
+
+.windy-composer__file-icon svg,
+.windy-message__file-icon svg,
+.windy-composer__file-remove svg {
+  height: var(--icon-s);
+  width: var(--icon-s);
+}
+
+.windy-composer__file-labels,
+.windy-message__file-labels {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.windy-composer__file-name,
+.windy-message__file-name,
+.windy-message__file-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.windy-composer__file-name,
+.windy-message__file-name {
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+}
+
+.windy-composer__file-size,
+.windy-message__file-path {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.windy-composer__file-remove {
+  height: 20px;
+  padding: 2px;
+  width: 20px;
 }
 
 .windy-composer__references {
