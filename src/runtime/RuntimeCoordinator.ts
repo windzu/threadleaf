@@ -159,9 +159,31 @@ export class RuntimeCoordinator {
     await (await this.ensureTask(conversationId)).setModel(model);
   }
 
+  async setSelection(
+    conversationId: string,
+    model: string,
+    reasoningEffort: string,
+  ): Promise<void> {
+    await (await this.ensureTask(conversationId)).setSelection(
+      model,
+      reasoningEffort,
+    );
+  }
+
+  async materializeSelection(
+    conversationId: string,
+    model: string,
+    reasoningEffort: string,
+  ): Promise<void> {
+    await (await this.ensureTask(conversationId)).materializeSelection(
+      model,
+      reasoningEffort,
+    );
+  }
+
   async setReasoningEffort(
     conversationId: string,
-    reasoningEffort: string | undefined,
+    reasoningEffort: string,
   ): Promise<void> {
     await (await this.ensureTask(conversationId))
       .setReasoningEffort(reasoningEffort);

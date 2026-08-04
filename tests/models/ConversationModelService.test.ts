@@ -71,7 +71,7 @@ describe('ConversationModelService', () => {
       },
     };
     const target: ConversationModelTarget = {
-      async setModel(): Promise<void> {},
+      async setSelection(): Promise<void> {},
       async setReasoningEffort(): Promise<void> {},
     };
     const service = new CodexConversationModelService(
@@ -111,8 +111,8 @@ describe('ConversationModelService', () => {
     assert.equal(requestCount, 2);
   });
 
-  it('persists explicit selection and clears it for Auto', async () => {
-    const updates: Array<[string, string | undefined]> = [];
+  it('persists a concrete model and its default effort atomically', async () => {
+    const updates: Array<[string, string, string]> = [];
     const gateway: ModelCatalogGateway = {
       async ensureReady(): Promise<void> {},
       async request<T>(): Promise<T> {
@@ -123,11 +123,12 @@ describe('ConversationModelService', () => {
       },
     };
     const target: ConversationModelTarget = {
-      async setModel(
+      async setSelection(
         conversationId: string,
-        selectedModel: string | undefined,
+        selectedModel: string,
+        reasoningEffort: string,
       ): Promise<void> {
-        updates.push([conversationId, selectedModel]);
+        updates.push([conversationId, selectedModel, reasoningEffort]);
       },
       async setReasoningEffort(): Promise<void> {},
     };
@@ -141,8 +142,8 @@ describe('ConversationModelService', () => {
     await service.select('conversation-1', null);
 
     assert.deepEqual(updates, [
-      ['conversation-1', 'gpt-5.6-terra'],
-      ['conversation-1', undefined],
+      ['conversation-1', 'gpt-5.6-terra', 'medium'],
+      ['conversation-1', 'gpt-5.6-terra', 'medium'],
     ]);
     await assert.rejects(
       service.select('conversation-1', 'missing'),
@@ -163,7 +164,7 @@ describe('ConversationModelService', () => {
         },
       },
       {
-        async setModel(): Promise<void> {},
+        async setSelection(): Promise<void> {},
         async setReasoningEffort(conversationId, reasoningEffort): Promise<void> {
           updates.push([conversationId, reasoningEffort]);
         },
@@ -187,7 +188,7 @@ describe('ConversationModelService', () => {
 
     assert.deepEqual(updates, [
       ['conversation-1', 'high'],
-      ['conversation-1', undefined],
+      ['conversation-1', 'medium'],
     ]);
     await assert.rejects(
       service.selectReasoningEffort('conversation-1', 'gpt-5.6-sol', 'xhigh'),
@@ -195,22 +196,61 @@ describe('ConversationModelService', () => {
     );
   });
 
-  it('labels an unset selection as Auto with the configured default', () => {
+  it('resolves provider and model defaults from the live catalog', async () => {
     const service = new CodexConversationModelService(
       {
         async ensureReady(): Promise<void> {},
         async request<T>(): Promise<T> {
-          throw new Error('Unexpected request');
+          return {
+            data: [model('gpt-5.6-sol', {
+              isDefault: true,
+              defaultReasoningEffort: 'low',
+            })],
+            nextCursor: null,
+          } as T;
         },
       },
       {
-        async setModel(): Promise<void> {},
+        async setSelection(): Promise<void> {},
         async setReasoningEffort(): Promise<void> {},
       },
       structuredClone(DEFAULT_WINDY_SETTINGS),
     );
 
-    assert.equal(service.getSelectionLabel(undefined), 'Auto');
-    assert.match(service.getAutoDescription(), /GPT-5\.6 Sol/);
+    assert.deepEqual(await service.getNewConversationDefaults(), {
+      model: 'gpt-5.6-sol',
+      reasoningEffort: 'low',
+    });
+    assert.equal(service.getSelectionLabel(undefined), 'Loading…');
+  });
+
+  it('preserves legacy persisted defaults when materializing an old conversation', async () => {
+    const settings = structuredClone(DEFAULT_WINDY_SETTINGS);
+    settings.model = 'gpt-5.6-sol';
+    settings.effortLevel = 'medium';
+    const service = new CodexConversationModelService(
+      {
+        async ensureReady(): Promise<void> {},
+        async request<T>(): Promise<T> {
+          return {
+            data: [model('gpt-5.6-sol', {
+              isDefault: true,
+              defaultReasoningEffort: 'low',
+            })],
+            nextCursor: null,
+          } as T;
+        },
+      },
+      {
+        async setSelection(): Promise<void> {},
+        async setReasoningEffort(): Promise<void> {},
+      },
+      settings,
+    );
+
+    assert.deepEqual(await service.getLegacyConversationDefaults(), {
+      model: 'gpt-5.6-sol',
+      reasoningEffort: 'medium',
+    });
   });
 });

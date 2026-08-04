@@ -314,14 +314,6 @@ export class CodexChatRuntime implements ChatRuntime {
     let turn = originalTurn;
     const providerSettings = this.getProviderSettings();
     const model = this.resolveModel(queryOptions, providerSettings);
-    if (!model) {
-      yield {
-        type: 'error',
-        content: 'No Codex model is selected. Enable a model in Windy settings.',
-      };
-      yield { type: 'done' };
-      return;
-    }
     await this.ensureReady();
 
     this.canceled = false;
@@ -518,7 +510,6 @@ export class CodexChatRuntime implements ChatRuntime {
               ? providerSettings.effortLevel.trim()
               : ''
           );
-        const effort = selectedEffort || 'medium';
         const resolvedModel = model;
         const isPlanMode = providerSettings.permissionMode === 'plan';
         const externalContextPaths = this.resolveExternalContextPaths(turn, queryOptions);
@@ -537,7 +528,7 @@ export class CodexChatRuntime implements ChatRuntime {
           mode: isPlanMode ? 'plan' as const : 'default' as const,
           settings: {
             model: resolvedModel,
-            reasoning_effort: effort,
+            reasoning_effort: selectedEffort || null,
             developer_instructions: null,
           },
         } : undefined;
@@ -555,7 +546,7 @@ export class CodexChatRuntime implements ChatRuntime {
           approvalPolicy: permissionMode.approvalPolicy,
           ...(resolvedModel ? { model: resolvedModel } : {}),
           serviceTier,
-          effort,
+          ...(selectedEffort ? { effort: selectedEffort } : {}),
           summary,
           sandboxPolicy,
           collaborationMode,

@@ -27,6 +27,7 @@ import {
 import { FloatingAgentButton } from './ui/FloatingAgentButton';
 import { WINDY_ICON_SVG, WINDY_NAV_ICON } from './ui/icons';
 import { WindyView, VIEW_TYPE_WINDY } from './ui/WindyView';
+import { WindySettingTab } from './ui/WindySettingTab';
 
 export default class WindyPlugin extends Plugin {
   private floatingButton: FloatingAgentButton | null = null;
@@ -83,6 +84,13 @@ export default class WindyPlugin extends Plugin {
       this.runtimeCoordinator,
       this.windySettings,
     );
+    this.addSettingTab(new WindySettingTab(
+      this.app,
+      this,
+      this.windySettings,
+      this.conversationModels,
+      settings => this.saveData(settings),
+    ));
     this.pageReferences = new PageReferenceService(() => (
       this.app.vault.getFiles().map(file => ({
         path: file.path,

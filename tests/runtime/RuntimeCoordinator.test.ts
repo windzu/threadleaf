@@ -580,6 +580,36 @@ describe('RuntimeCoordinator', () => {
     );
   });
 
+  it('stores a concrete model and reasoning effort in one selection update', async () => {
+    const conversations = new Map([['a', conversation('a')]]);
+    const coordinator = new RuntimeCoordinator(
+      host,
+      new MemoryConversationStore(conversations),
+      () => createFakeRuntime({}),
+    );
+
+    await coordinator.setSelection('a', 'gpt-5.6-sol', 'low');
+    const snapshot = await coordinator.getSnapshot('a');
+    assert.equal(snapshot.conversation?.selectedModel, 'gpt-5.6-sol');
+    assert.equal(snapshot.conversation?.selectedReasoningEffort, 'low');
+  });
+
+  it('materializes only missing legacy selection fields', async () => {
+    const legacy = conversation('a');
+    legacy.selectedModel = 'legacy-model';
+    const conversations = new Map([['a', legacy]]);
+    const coordinator = new RuntimeCoordinator(
+      host,
+      new MemoryConversationStore(conversations),
+      () => createFakeRuntime({}),
+    );
+
+    await coordinator.materializeSelection('a', 'fallback-model', 'medium');
+    const snapshot = await coordinator.getSnapshot('a');
+    assert.equal(snapshot.conversation?.selectedModel, 'legacy-model');
+    assert.equal(snapshot.conversation?.selectedReasoningEffort, 'medium');
+  });
+
   it('names a new conversation from its first request', async () => {
     const conversations = new Map([['a', conversation('a')]]);
     conversations.get('a')!.title = 'New conversation';

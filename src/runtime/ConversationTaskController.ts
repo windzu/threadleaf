@@ -329,7 +329,39 @@ export class ConversationTaskController {
     this.emit();
   }
 
-  async setReasoningEffort(reasoningEffort: string | undefined): Promise<void> {
+  async setSelection(model: string, reasoningEffort: string): Promise<void> {
+    this.assertSelectionCanChange();
+    this.conversation!.selectedModel = model;
+    this.conversation!.selectedReasoningEffort = reasoningEffort;
+    await this.persistSelection();
+  }
+
+  async materializeSelection(
+    model: string,
+    reasoningEffort: string,
+  ): Promise<void> {
+    this.assertSelectionCanChange();
+    let changed = false;
+    if (!this.conversation!.selectedModel) {
+      this.conversation!.selectedModel = model;
+      changed = true;
+    }
+    if (!this.conversation!.selectedReasoningEffort) {
+      this.conversation!.selectedReasoningEffort = reasoningEffort;
+      changed = true;
+    }
+    if (changed) {
+      await this.persistSelection();
+    }
+  }
+
+  async setReasoningEffort(reasoningEffort: string): Promise<void> {
+    this.assertSelectionCanChange();
+    this.conversation!.selectedReasoningEffort = reasoningEffort;
+    await this.persistSelection();
+  }
+
+  private assertSelectionCanChange(): void {
     if (
       this.taskStatus === 'running'
       || this.taskStatus === 'waiting-approval'
@@ -340,13 +372,11 @@ export class ConversationTaskController {
     if (!this.conversation) {
       throw new Error(`Conversation "${this.conversationId}" does not exist.`);
     }
-    if (reasoningEffort) {
-      this.conversation.selectedReasoningEffort = reasoningEffort;
-    } else {
-      delete this.conversation.selectedReasoningEffort;
-    }
-    await this.conversations.save(this.conversation);
-    this.runtime.syncConversationState(this.conversation);
+  }
+
+  private async persistSelection(): Promise<void> {
+    await this.conversations.save(this.conversation!);
+    this.runtime.syncConversationState(this.conversation!);
     this.emit();
   }
 
