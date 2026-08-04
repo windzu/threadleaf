@@ -70,6 +70,21 @@ Run the complete local check before requesting review:
 Use focused tests while iterating, then run the complete check before pushing
 the final revision.
 
+## Local development deployment
+
+Create a Git-ignored `.env.local` file with the local Vault path:
+
+`WINDY_VAULT=/absolute/path/to/vault`
+
+Run `npm run dev` to watch the TypeScript bundle. Every successful rebuild is
+copied to `.obsidian/plugins/windy` in that Vault and touches `.hotreload`.
+Changes to `styles.css` and `manifest.json` are also deployed while the watcher
+is running. Failed builds never replace the installed plugin.
+
+`npm run build` remains deployment-free so production builds and CI cannot
+overwrite a developer's active plugin. `npm run deploy:local -- <vault-path>`
+is available for an explicit one-time deployment.
+
 ## After merge
 
 GitHub automatically deletes the merged remote branch. Local branches cannot
