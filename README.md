@@ -90,6 +90,9 @@ The recommended installation method is
 from its GitHub Release and can keep it updated. Manual installation is also
 supported.
 
+For most users, BRAT should be the first choice; use the manual installation
+only when BRAT is unavailable.
+
 ### Requirements
 
 - Obsidian 1.7.2 or newer on desktop;
