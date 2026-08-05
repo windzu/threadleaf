@@ -17,11 +17,14 @@ import {
 } from './pageReferenceMentions';
 import type { ConversationTaskStatus } from '../runtime/RuntimeCoordinator';
 import {
-  formatToolName,
   formatToolPayload,
   toolStatusIcon,
   toolStatusLabel,
 } from './messageFormatting';
+import {
+  type ActivityItem,
+  buildActivityViewModel,
+} from './activityFormatting';
 import { WINDY_NAV_ICON } from './icons';
 import {
   attachmentIcon,
@@ -43,6 +46,12 @@ export class MessageListRenderer extends Component {
     status: ConversationTaskStatus,
   ): Promise<void> {
     const markdownRenders: Promise<void>[] = [];
+    let lastAssistantIndex = -1;
+    messages.forEach((message, index) => {
+      if (message.role === 'assistant') {
+        lastAssistantIndex = index;
+      }
+    });
     for (const [index, message] of messages.entries()) {
       const messageElement = container.createDiv({
         cls: `windy-message windy-message--${message.role}`,
@@ -56,12 +65,12 @@ export class MessageListRenderer extends Component {
       this.renderFileAttachments(messageElement, message);
       this.renderReferences(messageElement, message);
       if (message.role === 'assistant') {
-        const activity = messageElement.createDiv('windy-message__activity');
-        this.renderThinking(activity, message);
-        this.renderTools(activity, message.toolCalls ?? []);
-        if (activity.childElementCount === 0) {
-          activity.remove();
-        }
+        this.renderActivity(
+          messageElement,
+          message,
+          index === lastAssistantIndex,
+          status,
+        );
       }
       const contentElement = messageElement.createDiv(
         'windy-message__content',
@@ -94,10 +103,6 @@ export class MessageListRenderer extends Component {
         } else {
           contentElement.setText(content);
         }
-      }
-      if (message.role !== 'assistant') {
-        this.renderThinking(messageElement, message);
-        this.renderTools(messageElement, message.toolCalls ?? []);
       }
     }
     await Promise.all(markdownRenders);
@@ -208,38 +213,95 @@ export class MessageListRenderer extends Component {
     }
   }
 
-  private renderThinking(
+  private renderActivity(
     messageElement: HTMLElement,
     message: ChatMessage,
+    isLatestAssistant: boolean,
+    status: ConversationTaskStatus,
   ): void {
-    const thinking = message.contentBlocks
-      ?.filter(block => block.type === 'thinking')
-      .map(block => block.content)
-      .join('\n\n');
-    if (!thinking) {
+    const activity = buildActivityViewModel(
+      message,
+      isLatestAssistant,
+      status,
+    );
+    if (!activity.shouldRender) {
       return;
     }
+
     const details = messageElement.createEl('details', {
-      cls: 'windy-thinking',
+      cls: `windy-activity windy-activity--${activity.state}`,
     });
-    details.createEl('summary', { text: 'Reasoning' });
-    details.createEl('pre', { text: thinking });
+    details.open = activity.defaultExpanded;
+    const summary = details.createEl('summary', {
+      cls: 'windy-activity__summary',
+    });
+    const disclosure = summary.createSpan('windy-activity__disclosure');
+    setIcon(disclosure, 'chevron-right');
+    const stateIcon = summary.createSpan('windy-activity__state-icon');
+    setIcon(stateIcon, activityStateIcon(activity.state));
+    summary.createSpan({
+      cls: 'windy-activity__title',
+      text: activity.summary,
+    });
+    if (activity.items.length > 0) {
+      summary.createSpan({
+        cls: 'windy-activity__count',
+        text: `${activity.items.length} ${activity.items.length === 1 ? 'activity' : 'activities'}`,
+      });
+    }
+
+    const body = details.createDiv('windy-activity__body');
+    if (activity.items.length === 0) {
+      body.createDiv({
+        cls: 'windy-activity__empty',
+        text: activity.defaultExpanded
+          ? 'Preparing…'
+          : 'No detailed activity recorded.',
+      });
+    } else {
+      for (const item of activity.items) {
+        this.renderActivityItem(body, item);
+      }
+    }
   }
 
-  private renderTools(
-    messageElement: HTMLElement,
-    toolCalls: ToolCallInfo[],
-  ): void {
-    if (toolCalls.length === 0) {
+  private renderActivityItem(container: HTMLElement, item: ActivityItem): void {
+    if (item.toolCall) {
+      this.renderTool(container, item.toolCall, item.title);
       return;
     }
-    const tools = messageElement.createDiv('windy-message__tools');
-    for (const toolCall of toolCalls) {
-      this.renderTool(tools, toolCall);
+
+    const details = item.detail
+      ? container.createEl('details', {
+          cls: `windy-tool windy-tool--${item.status}`,
+        })
+      : null;
+    const summary = details
+      ? details.createEl('summary', { cls: 'windy-tool__summary' })
+      : container.createDiv({
+          cls: `windy-tool__summary windy-tool__summary--static windy-tool--${item.status}`,
+        });
+    const icon = summary.createSpan('windy-tool__icon');
+    setIcon(icon, item.kind === 'reasoning'
+      ? (item.status === 'running' ? 'loader-circle' : 'brain')
+      : toolStatusIcon(item.status));
+    summary.createSpan({
+      cls: 'windy-tool__name',
+      text: item.title,
+    });
+    if (details && item.detail) {
+      details.createEl('pre', {
+        cls: 'windy-thinking__content',
+        text: item.detail,
+      });
     }
   }
 
-  private renderTool(container: HTMLElement, toolCall: ToolCallInfo): void {
+  private renderTool(
+    container: HTMLElement,
+    toolCall: ToolCallInfo,
+    title: string,
+  ): void {
     const details = container.createEl('details', {
       cls: `windy-tool windy-tool--${toolCall.status}`,
     });
@@ -255,7 +317,7 @@ export class MessageListRenderer extends Component {
     setIcon(icon, toolStatusIcon(toolCall.status));
     summary.createSpan({
       cls: 'windy-tool__name',
-      text: formatToolName(toolCall.name),
+      text: title,
     });
     summary.createSpan({
       cls: 'windy-tool__status',
@@ -291,6 +353,26 @@ export class MessageListRenderer extends Component {
       cls: 'windy-tool__payload',
       text: formatToolPayload(value),
     });
+  }
+}
+
+function activityStateIcon(state: string): string {
+  switch (state) {
+    case 'running':
+      return 'loader-circle';
+    case 'waiting-approval':
+    case 'waiting-input':
+      return 'circle-help';
+    case 'completed':
+      return 'clock-3';
+    case 'failed':
+      return 'circle-alert';
+    case 'cancelled':
+      return 'circle-stop';
+    case 'interrupted':
+      return 'pause-circle';
+    default:
+      return 'activity';
   }
 }
 

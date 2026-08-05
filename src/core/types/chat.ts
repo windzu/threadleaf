@@ -36,7 +36,7 @@ export interface FileAttachment {
   location: 'vault' | 'external';
   mediaType?: string;
   size: number;
-  source: 'picker' | 'drop';
+  source: 'picker' | 'drop' | 'paste';
 }
 
 /** Content block for preserving streaming order in messages. */
@@ -46,6 +46,12 @@ export type ContentBlock =
   | { type: 'thinking'; content: string; durationSeconds?: number }
   | { type: 'subagent'; subagentId: string; mode?: SubagentMode }
   | { type: 'context_compacted' };
+
+export type AssistantTurnStatus =
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+  | 'interrupted';
 
 /** Chat message with content, tool calls, and attachments. */
 export interface ChatMessage {
@@ -69,6 +75,8 @@ export interface ChatMessage {
   isRebuiltContext?: boolean;
   /** Duration in seconds from user send to response completion. */
   durationSeconds?: number;
+  /** Persisted terminal state for the assistant turn. */
+  turnStatus?: AssistantTurnStatus;
   /** Flavor word used for duration display (e.g., "Baked", "Cooked"). */
   durationFlavorWord?: string;
   /** Provider-native user message identifier used for rewind. */

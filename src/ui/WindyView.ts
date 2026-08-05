@@ -26,6 +26,7 @@ import type {
   ConversationRuntimeSnapshot,
   RuntimeCoordinator,
 } from '../runtime/RuntimeCoordinator';
+import { ClipboardImageStore } from '../storage/ClipboardImageStore';
 import { renderConversationHistoryControl } from './ConversationHistoryControl';
 import { EMPTY_STATE_ACTIONS } from './emptyStateActions';
 import { renderWindyComposer } from './WindyComposer';
@@ -58,6 +59,7 @@ export class WindyView extends ItemView {
   private messageRenderer: MessageListRenderer | null = null;
   private messageRenderGeneration = 0;
   private readonly messageScrollPositions = new MessageScrollPositionStore();
+  private readonly clipboardImages: ClipboardImageStore;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -69,6 +71,7 @@ export class WindyView extends ItemView {
     private readonly permissionModes: PermissionModeController,
   ) {
     super(leaf);
+    this.clipboardImages = new ClipboardImageStore(this.app.vault.adapter);
   }
 
   getViewType(): string {
@@ -283,6 +286,7 @@ export class WindyView extends ItemView {
       references: composerDraft.references,
       attachments: composerDraft.attachments,
       vaultPath: getVaultPath(this.app),
+      clipboardImages: this.clipboardImages,
       selectedModel: isDraft
         ? composerDraft.selectedModel
         : snapshot.conversation?.selectedModel,

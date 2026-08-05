@@ -3,6 +3,7 @@ import type { StreamChunk, UsageInfo } from '../../../core/types';
 import { extractCodexUserVisibleText, joinCodexUserTextParts } from '../codexUserText';
 import {
   appendCodexCommandOutput,
+  decodeCodexExecEnvelope,
   extractCodexExecCellId,
   isCodexToolOutputError,
   normalizeCodexToolCall,
@@ -12,6 +13,7 @@ import {
   parseCodexArguments,
   readCodexExecCellIdArgument,
   stringifyCodexToolOutput,
+  type NormalizedCodexToolCall,
 } from '../normalization/codexToolNormalization';
 import type {
   AgentMessageDeltaNotification,
@@ -74,6 +76,7 @@ export class CodexNotificationRouter {
   private rawToolNamesByCallId = new Map<string, string>();
   private rawToolInputsByCallId = new Map<string, Record<string, unknown>>();
   private rawToolOutputsByCallId = new Map<string, RawToolResult>();
+  private execEnvelopeToolCallIds = new Map<string, string[]>();
   private immediateRawOutputCallIds = new Set<string>();
   private emittedImmediateToolResultIds = new Set<string>();
   private wrappedCommandCallIdsByCellId = new Map<string, string>();
@@ -143,6 +146,7 @@ export class CodexNotificationRouter {
     this.rawToolNamesByCallId.clear();
     this.rawToolInputsByCallId.clear();
     this.rawToolOutputsByCallId.clear();
+    this.execEnvelopeToolCallIds.clear();
     this.immediateRawOutputCallIds.clear();
     this.emittedImmediateToolResultIds.clear();
     this.wrappedCommandCallIdsByCellId.clear();
@@ -163,6 +167,7 @@ export class CodexNotificationRouter {
     this.rawToolNamesByCallId.clear();
     this.rawToolInputsByCallId.clear();
     this.rawToolOutputsByCallId.clear();
+    this.execEnvelopeToolCallIds.clear();
     this.immediateRawOutputCallIds.clear();
     this.emittedImmediateToolResultIds.clear();
     this.wrappedCommandCallIdsByCellId.clear();
@@ -406,6 +411,13 @@ export class CodexNotificationRouter {
     }
 
     const rawArguments = parseRawArguments(item);
+    const execEnvelopeCalls = rawName === 'exec'
+      ? decodeCodexExecEnvelope(rawArguments)
+      : null;
+    if (execEnvelopeCalls && execEnvelopeCalls.length > 1) {
+      this.emitExecEnvelopeToolUses(callId, execEnvelopeCalls);
+      return;
+    }
     if (rawName === 'wait') {
       const cellId = readCodexExecCellIdArgument(rawArguments);
       const commandCallId = cellId
@@ -475,9 +487,40 @@ export class CodexNotificationRouter {
     });
   }
 
+  private emitExecEnvelopeToolUses(
+    callId: string,
+    calls: NormalizedCodexToolCall[],
+  ): void {
+    this.resetAssistantSegmentText();
+    const nestedCallIds = calls.map((call, index) => {
+      const nestedCallId = `${callId}:${index + 1}`;
+      this.rawStartedCallIds.add(nestedCallId);
+      this.rawToolNamesByCallId.set(nestedCallId, call.name);
+      this.rawToolInputsByCallId.set(nestedCallId, call.input);
+      this.emit({
+        type: 'tool_use',
+        id: nestedCallId,
+        name: call.name,
+        input: call.input,
+      });
+      return nestedCallId;
+    });
+    this.execEnvelopeToolCallIds.set(callId, nestedCallIds);
+  }
+
   private handleRawToolOutput(item: Record<string, unknown>): void {
     const callId = readRawCallId(item);
     if (!callId) {
+      return;
+    }
+
+    const execEnvelopeToolCallIds = this.execEnvelopeToolCallIds.get(callId);
+    if (execEnvelopeToolCallIds) {
+      this.execEnvelopeToolCallIds.delete(callId);
+      this.emitExecEnvelopeToolResults(
+        execEnvelopeToolCallIds,
+        item.output,
+      );
       return;
     }
 
@@ -527,6 +570,37 @@ export class CodexNotificationRouter {
     }
 
     this.rawToolOutputsByCallId.set(callId, result);
+  }
+
+  private emitExecEnvelopeToolResults(
+    toolCallIds: string[],
+    rawOutput: unknown,
+  ): void {
+    const rawOutputText = stringifyCodexToolOutput(rawOutput);
+    const outputParts = splitExecEnvelopeOutput(rawOutput, toolCallIds.length);
+    const aggregateIsError = isCodexToolOutputError(rawOutputText);
+
+    for (const [index, toolCallId] of toolCallIds.entries()) {
+      const name = this.rawToolNamesByCallId.get(toolCallId) ?? 'tool';
+      const input = this.rawToolInputsByCallId.get(toolCallId);
+      this.rawToolNamesByCallId.delete(toolCallId);
+      this.rawToolInputsByCallId.delete(toolCallId);
+      this.rawStartedCallIds.delete(toolCallId);
+      const output = outputParts?.[index];
+      const outputText = outputParts
+        ? stringifyCodexToolOutput(output)
+        : index === toolCallIds.length - 1
+          ? rawOutputText
+          : '';
+      this.emit({
+        type: 'tool_result',
+        id: toolCallId,
+        content: normalizeRawToolOutput(name, output ?? outputText, input),
+        isError: outputParts
+          ? isCodexToolOutputError(outputText)
+          : aggregateIsError,
+      });
+    }
   }
 
   private handleWrappedWaitOutput(waitCall: WrappedWaitCall, rawOutput: unknown): void {
@@ -1001,6 +1075,29 @@ function parseRawArguments(item: Record<string, unknown>): Record<string, unknow
 
 function isSilentWriteStdinInput(input: Record<string, unknown>): boolean {
   return typeof input.chars !== 'string' || input.chars.length === 0;
+}
+
+function splitExecEnvelopeOutput(
+  rawOutput: unknown,
+  toolCallCount: number,
+): unknown[] | null {
+  if (!Array.isArray(rawOutput)) {
+    return null;
+  }
+
+  const outputParts = rawOutput.map(part => {
+    const record = asRecord(part);
+    return typeof record?.text === 'string' ? record.text : [part];
+  });
+  if (
+    outputParts.length === toolCallCount + 1
+    && typeof outputParts[0] === 'string'
+    && outputParts[0].startsWith('Script ')
+    && outputParts[0].endsWith('Output:\n')
+  ) {
+    return outputParts.slice(1);
+  }
+  return outputParts.length === toolCallCount ? outputParts : null;
 }
 
 function normalizeRawToolOutput(
