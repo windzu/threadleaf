@@ -103,3 +103,147 @@ test('preserves the active conversation position across consecutive renders', ()
     stickToBottom: false,
   });
 });
+
+test('manual scrolling overrides a pending bottom restoration', () => {
+  const store = new MessageScrollPositionStore();
+  const previous: TestScroller = {
+    clientHeight: 400,
+    scrollHeight: 1_000,
+    scrollTop: 600,
+  };
+  const initialPosition = store.prepareForRender('conversation-a', previous);
+  const replacement: TestScroller = {
+    clientHeight: 400,
+    scrollHeight: 1_200,
+    scrollTop: 800,
+  };
+  store.trackActiveContainer('conversation-a', replacement);
+  store.restoreActivePosition(
+    'conversation-a',
+    replacement,
+    initialPosition,
+  );
+
+  assert.equal(initialPosition.stickToBottom, true);
+
+  replacement.scrollTop = 250;
+  store.recordActiveScroll('conversation-a', replacement);
+  restoreMessageScrollPosition(
+    replacement,
+    store.getPosition('conversation-a'),
+  );
+
+  assert.equal(replacement.scrollTop, 250);
+  assert.equal(store.getPosition('conversation-a').stickToBottom, false);
+});
+
+test('does not treat a programmatic restoration as manual scrolling', () => {
+  const store = new MessageScrollPositionStore();
+  const position = store.prepareForRender('conversation-a', null);
+  const current: TestScroller = {
+    clientHeight: 400,
+    scrollHeight: 1_200,
+    scrollTop: 0,
+  };
+  store.trackActiveContainer('conversation-a', current);
+
+  store.restoreActivePosition('conversation-a', current, position);
+  current.scrollHeight = 1_400;
+  store.recordActiveScroll('conversation-a', current);
+
+  assert.equal(store.getPosition('conversation-a').stickToBottom, true);
+});
+
+test('keeps a manual near-bottom position across the next render', () => {
+  const store = new MessageScrollPositionStore();
+  store.prepareForRender('conversation-a', null);
+  const current: TestScroller = {
+    clientHeight: 400,
+    scrollHeight: 1_200,
+    scrollTop: 790,
+  };
+  store.trackActiveContainer('conversation-a', current);
+
+  store.recordActiveScroll('conversation-a', current);
+  const nextPosition = store.prepareForRender('conversation-a', current);
+
+  assert.deepEqual(nextPosition, {
+    scrollTop: 790,
+    stickToBottom: false,
+  });
+});
+
+test('scrolling back to the bottom resumes automatic following', () => {
+  const store = new MessageScrollPositionStore();
+  store.prepareForRender('conversation-a', null);
+  const current: TestScroller = {
+    clientHeight: 400,
+    scrollHeight: 1_200,
+    scrollTop: 250,
+  };
+  store.trackActiveContainer('conversation-a', current);
+
+  store.recordActiveScroll('conversation-a', current);
+  current.scrollTop = 800;
+  store.recordActiveScroll('conversation-a', current);
+
+  const replacement: TestScroller = {
+    clientHeight: 400,
+    scrollHeight: 1_500,
+    scrollTop: 0,
+  };
+  restoreMessageScrollPosition(
+    replacement,
+    store.getPosition('conversation-a'),
+  );
+
+  assert.equal(replacement.scrollTop, 1_500);
+  assert.equal(store.getPosition('conversation-a').stickToBottom, true);
+});
+
+test('ignores stale scroll events from an inactive conversation', () => {
+  const store = new MessageScrollPositionStore();
+  store.prepareForRender('conversation-a', null);
+  store.prepareForRender('conversation-b', null);
+  const active: TestScroller = {
+    clientHeight: 400,
+    scrollHeight: 1_000,
+    scrollTop: 600,
+  };
+  store.trackActiveContainer('conversation-b', active);
+
+  store.recordActiveScroll('conversation-a', {
+    clientHeight: 400,
+    scrollHeight: 1_000,
+    scrollTop: 200,
+  });
+
+  assert.deepEqual(store.getPosition('conversation-b'), {
+    scrollTop: 0,
+    stickToBottom: true,
+  });
+});
+
+test('ignores delayed scroll events from a replaced container', () => {
+  const store = new MessageScrollPositionStore();
+  store.prepareForRender('conversation-a', null);
+  const replaced: TestScroller = {
+    clientHeight: 400,
+    scrollHeight: 1_000,
+    scrollTop: 200,
+  };
+  const active: TestScroller = {
+    clientHeight: 400,
+    scrollHeight: 1_200,
+    scrollTop: 350,
+  };
+  store.trackActiveContainer('conversation-a', active);
+  store.recordActiveScroll('conversation-a', active);
+
+  store.recordActiveScroll('conversation-a', replaced);
+
+  assert.deepEqual(store.getPosition('conversation-a'), {
+    scrollTop: 350,
+    stickToBottom: false,
+  });
+});
