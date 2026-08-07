@@ -34,7 +34,6 @@ import { WINDY_NAV_ICON } from './icons';
 import { MessageListRenderer } from './MessageListRenderer';
 import {
   MessageScrollPositionStore,
-  restoreMessageScrollPosition,
 } from './messageScrollPosition';
 import {
   type ComposerPageReference,
@@ -248,13 +247,25 @@ export class WindyView extends ItemView {
       page.path,
       snapshot?.status ?? 'idle',
     );
-    restoreMessageScrollPosition(messages, scrollPosition);
+    this.messageScrollPositions.trackActiveContainer(scrollKey, messages);
+    messages.addEventListener('scroll', () => {
+      this.messageScrollPositions.recordActiveScroll(scrollKey, messages);
+    });
+    this.messageScrollPositions.restoreActivePosition(
+      scrollKey,
+      messages,
+      scrollPosition,
+    );
     void renderMessages.then(() => {
       if (renderGeneration !== this.messageRenderGeneration) {
         return;
       }
       messages.ownerDocument.defaultView?.requestAnimationFrame(() => {
-        restoreMessageScrollPosition(messages, scrollPosition);
+        this.messageScrollPositions.restoreActivePosition(
+          scrollKey,
+          messages,
+          this.messageScrollPositions.getPosition(scrollKey),
+        );
       });
     });
 
