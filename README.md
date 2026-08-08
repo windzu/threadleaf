@@ -149,16 +149,29 @@ trusted.
 
 ## Data, permissions, and privacy
 
-Windy launches `codex app-server` as a local child process and uses the
-existing Codex CLI authentication. Depending on the selected permission mode
-and approved tool calls, Codex can read or modify files in the Vault and run
-local commands.
+Windy makes the following disclosures for informed installation:
+
+- **Account requirement:** Windy requires Codex CLI authentication through a
+  ChatGPT account or an OpenAI API key. The plugin has no separate Windy
+  account.
+- **Network use:** Windy launches `codex app-server` as a local child process.
+  Codex connects to OpenAI services to run conversations, discover available
+  models, and execute enabled online tools.
+- **File-system access:** Windy reads and writes conversation data inside the
+  active Vault. Files outside the Vault are accessed only when the user
+  explicitly attaches them or authorizes an agent tool to access them.
+- **Local command execution:** Depending on the selected permission mode and
+  approved tool calls, Codex can run local commands and read or modify files.
+  The **YOLO** mode grants unrestricted local execution and should only be
+  enabled in trusted environments.
+- **Telemetry:** Windy has no separate hosted service, advertising, or
+  telemetry. OpenAI services process Codex requests according to the terms and
+  privacy policy of the user's chosen Codex authentication method.
 
 Windy stores page mappings and conversations in `.windy` inside the Vault.
 Settings are stored in Obsidian's plugin data. Attached files remain in their
 original locations; Windy stores path references and metadata rather than
-copying them into the Vault. Windy has no separate hosted service and does not
-add telemetry.
+copying them into the Vault.
 
 ## Status
 
