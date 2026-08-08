@@ -33,7 +33,7 @@ export class WindySettingTab extends PluginSettingTab {
     const generation = ++this.renderGeneration;
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl('h2', { text: 'Windy' });
+    new Setting(containerEl).setName('Windy').setHeading();
     containerEl.createEl('p', {
       text: 'Defaults apply only to conversations created after you change them. '
         + 'Each conversation stores the concrete model and reasoning effort it starts with.',
@@ -52,7 +52,7 @@ export class WindySettingTab extends PluginSettingTab {
         return;
       }
       containerEl.empty();
-      containerEl.createEl('h2', { text: 'Windy' });
+      new Setting(containerEl).setName('Windy').setHeading();
       new Setting(containerEl)
         .setName('Could not load Codex models')
         .setDesc(error instanceof Error ? error.message : String(error));
@@ -62,7 +62,7 @@ export class WindySettingTab extends PluginSettingTab {
   private renderModelSettings(options: ConversationModelOption[]): void {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl('h2', { text: 'Windy' });
+    new Setting(containerEl).setName('Windy').setHeading();
     containerEl.createEl('p', {
       text: 'Defaults apply only to new conversations. Existing conversations keep '
         + 'their stored model and reasoning effort.',
