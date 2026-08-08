@@ -84,14 +84,9 @@ See [Project Vision](docs/VISION.md) for the product boundary and architectural 
 
 ## Installation
 
-Windy is not yet listed in Obsidian's official Community Plugins directory.
-The recommended installation method is
-[BRAT](https://github.com/TfTHacker/obsidian42-brat), which installs Windy
-from its GitHub Release and can keep it updated. Manual installation is also
-supported.
-
-For most users, BRAT should be the first choice; use the manual installation
-only when BRAT is unavailable.
+Windy is available in Obsidian's official Community Plugins directory. Install
+it there to receive normal plugin updates. BRAT and manual installation remain
+available for testing GitHub releases directly.
 
 ### Requirements
 
@@ -104,7 +99,16 @@ Run `codex --version` to confirm the CLI installation. Run
 `codex login` to sign in with ChatGPT, then use `codex login status` to verify
 the active session. API-key authentication supported by Codex CLI also works.
 
-### Install with BRAT (recommended)
+### Install from Community Plugins (recommended)
+
+1. In Obsidian, open **Settings → Community plugins → Browse**.
+2. Search for **Windy**.
+3. Select **Windy**, then choose **Install** and **Enable**.
+
+Future stable releases appear in Obsidian's normal Community plugin update
+flow.
+
+### Install with BRAT (beta releases)
 
 1. In Obsidian, open **Settings → Community plugins → Browse**.
 2. Install and enable **BRAT**.
@@ -115,8 +119,9 @@ the active session. API-key authentication supported by Codex CLI also works.
 6. Open **Settings → Community plugins** and enable **Windy** if BRAT did not
    enable it automatically.
 
-BRAT tracks the repository and can install future Windy releases without
-manually replacing plugin files.
+BRAT tracks GitHub Releases directly and may receive a new Windy release before
+it reaches the Community directory. Use it when testing release candidates or
+when you specifically want the GitHub release channel.
 
 ### Install manually
 
