@@ -390,8 +390,12 @@ export class ConversationTaskController {
   }
 
   private async persistSelection(): Promise<void> {
-    await this.conversations.save(this.conversation!);
-    this.runtime.syncConversationState(this.conversation!);
+    const conversation = this.conversation;
+    if (!conversation) {
+      throw new Error(`Conversation "${this.conversationId}" does not exist.`);
+    }
+    await this.conversations.save(conversation);
+    this.runtime.syncConversationState(conversation);
     this.emit();
   }
 

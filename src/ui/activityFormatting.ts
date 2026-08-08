@@ -41,7 +41,7 @@ export function buildActivityViewModel(
     || state === 'waiting-input';
 
   if (isActive && items.at(-1)?.kind === 'reasoning') {
-    items[items.length - 1]!.status = 'running';
+    items[items.length - 1].status = 'running';
   }
 
   return {
@@ -118,7 +118,7 @@ export function formatActivityToolTitle(toolCall: ToolCallInfo): string {
   if (normalizedName === 'apply_patch' || normalizedName === 'file_change') {
     const paths = extractChangedPaths(input);
     if (paths.length === 1) {
-      return `Edited ${truncateInline(paths[0]!)}`;
+      return `Edited ${truncateInline(paths[0])}`;
     }
     return paths.length > 1 ? `Edited ${paths.length} files` : 'Edited files';
   }

@@ -302,16 +302,16 @@ function renderInlineReference(
 }
 
 function readEditorText(root: Node): string {
-  if (root instanceof HTMLElement) {
+  if (root.instanceOf(HTMLElement)) {
     const path = root.dataset.pagePath;
     if (path) {
       return `@${path}`;
     }
   }
-  if (root instanceof HTMLBRElement) {
+  if (root.instanceOf(HTMLBRElement)) {
     return '\n';
   }
-  if (root instanceof Text) {
+  if (root.instanceOf(Text)) {
     return root.data;
   }
   return [...root.childNodes].map(readEditorText).join('');
@@ -337,17 +337,17 @@ function getEditorMentionRanges(root: Node): TextRange[] {
   const ranges: TextRange[] = [];
   let offset = 0;
   const visit = (node: Node): void => {
-    if (node instanceof HTMLElement && node.dataset.pagePath) {
+    if (node.instanceOf(HTMLElement) && node.dataset.pagePath) {
       const start = offset;
       offset += `@${node.dataset.pagePath}`.length;
       ranges.push({ start, end: offset });
       return;
     }
-    if (node instanceof HTMLBRElement) {
+    if (node.instanceOf(HTMLBRElement)) {
       offset += 1;
       return;
     }
-    if (node instanceof Text) {
+    if (node.instanceOf(Text)) {
       offset += node.data.length;
       return;
     }
@@ -364,7 +364,7 @@ function setEditorCaretOffset(root: HTMLElement, offset: number): void {
   let remaining = Math.max(0, offset);
   for (const node of [...root.childNodes]) {
     const length = readEditorText(node).length;
-    if (node instanceof Text && remaining <= length) {
+    if (node.instanceOf(Text) && remaining <= length) {
       range.setStart(node, remaining);
       range.collapse(true);
       applySelection(range);

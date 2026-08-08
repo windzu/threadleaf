@@ -18,10 +18,7 @@ import type {
 } from '../page-context/PageConversationRouter';
 import type { PageConversationService } from '../page-context/PageConversationService';
 import type { ConversationModelService } from '../models/types';
-import type {
-  PageReference,
-  PageReferenceService,
-} from '../page-context/PageReferenceService';
+import type { PageReferenceService } from '../page-context/PageReferenceService';
 import type {
   ConversationRuntimeSnapshot,
   RuntimeCoordinator,
@@ -461,7 +458,7 @@ export class WindyView extends ItemView {
       this.renderUserInputQuestion(form, question, index)
     ));
     const actions = form.createDiv('windy-view__user-input-actions');
-    const submit = actions.createEl('button', {
+    actions.createEl('button', {
       cls: 'mod-cta',
       text: 'Continue',
       attr: { type: 'submit' },
@@ -574,7 +571,7 @@ export class WindyView extends ItemView {
       return {
         key,
         label: question.header,
-        value: question.multiSelect ? selected : selected[0]!,
+        value: question.multiSelect ? selected : selected[0],
       };
     };
   }

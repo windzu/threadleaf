@@ -217,10 +217,6 @@ export default class WindyPlugin extends Plugin {
     });
   }
 
-  onunload(): void {
-    this.app.workspace.detachLeavesOfType(VIEW_TYPE_WINDY);
-  }
-
   private async openAgent(): Promise<void> {
     const existing = this.app.workspace.getLeavesOfType(VIEW_TYPE_WINDY)[0];
     const leaf = existing ?? this.app.workspace.getRightLeaf(false);
@@ -232,7 +228,7 @@ export default class WindyPlugin extends Plugin {
       type: VIEW_TYPE_WINDY,
       active: true,
     });
-    this.app.workspace.revealLeaf(leaf);
+    await this.app.workspace.revealLeaf(leaf);
     this.floatingButton?.setVisible(false);
     if (leaf.view instanceof WindyView) {
       leaf.view.focusComposer();
