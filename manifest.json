@@ -1,9 +1,9 @@
 {
   "id": "windy",
   "name": "Windy",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "minAppVersion": "1.7.2",
-  "description": "A page-native agent that follows your active Obsidian page.",
+  "description": "A page-native agent that follows your active page.",
   "author": "windzu",
   "authorUrl": "https://github.com/windzu",
   "isDesktopOnly": true
